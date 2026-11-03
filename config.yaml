@@ -1,0 +1,39 @@
+# ===== Fab Bot 配置 =====
+# 离线演示: 保持 llm.mock=true, 无 GPU 也能跑通全流程
+# 接入真实模型: 启动 vLLM (见 README) 后把 mock 改为 false
+
+llm:
+  mock: true                          # true=内置 Mock 演示; false=走 OpenAI 兼容接口
+  base_url: "http://127.0.0.1:8000/v1"  # vLLM; Ollama 为 http://127.0.0.1:11434/v1
+  api_key: "EMPTY"
+  model: "Qwen2.5-32B-Instruct-AWQ"
+  timeout: 120
+
+rag:
+  knowledge_path: "data/knowledge"    # 待导入文档目录 (.md/.txt/.docx/.pdf)
+  store_path: "data/vector_store"
+  chunk_size: 500                     # 中文按字符数
+  chunk_overlap: 80
+  top_k: 5
+  embedding:
+    provider: mock                    # mock | openai (兼容接口, 生产建议 BGE-M3)
+    base_url: "http://127.0.0.1:8001/v1"
+    model: "bge-m3"
+
+sqlbot:
+  db_path: "data/demo/fab_demo.db"    # 生产环境: 换成 IT 侧只读中间库的连接方式
+  max_rows: 200
+
+audit:
+  path: "data/audit.log"              # 所有问答留痕 (JSONL), 生产环境建议入库
+
+# HCL Notes (Lotus Notes) 内容接入 —— 内容存于 Domino .nsf, 须经接口抽取
+notes:
+  mode: export                        # export=读导出目录(推荐) | domino=经 Domino HTTP 拉取
+  export_dir: "data/notes_export"     # 导出 JSON 目录 (契约见 app/adapters/hcl_notes.py)
+  domino:
+    base_url: "https://domino.example.com"  # Domino HTTP 地址 (办公网只读路径)
+    db_path: "KB/process.nsf"
+    view: "($All)"
+    username: ""                      # 只读服务账号, 由 Domino 管理员开通并审计
+    password: ""

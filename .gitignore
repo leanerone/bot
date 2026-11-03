@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# 运行时产物 (启动时自动生成, 不入库)
+data/vector_store/
+data/audit.log
+data/demo/fab_demo.db
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

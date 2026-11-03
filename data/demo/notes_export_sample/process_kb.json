@@ -1,0 +1,35 @@
+{
+ "db_title": "工艺经验库",
+ "db_path": "KB/process.nsf",
+ "docs": [
+  {
+   "unid": "C1257A1B00000011",
+   "subject": "腔压越限处置经验（夜班）",
+   "author": "张工",
+   "modified": "2026-10-30T22:40:00",
+   "body_text": "",
+   "body_html": "<p>夜班 ETCH-02 报 C2201 腔压越限，先看 Throttle Valve 开度反馈是否跟随设定值，不跟随基本是阀体卡滞。</p><p>其次查干泵出口压力，若同步偏高则优先怀疑泵组能力衰减而非腔体泄漏。</p><p>处置检查单见附件，做完 Leak Check 后必须 Seasoning 再恢复生产。</p><p>详细 SOP：<a href=\"notes://FABAPP/C1257A1B000000FF/0/C1257A1B00000099\">ETCH 异常处置 SOP 库</a></p>",
+   "attachments": [
+    {"name": "处置检查单", "file": "attachments/checklist.md"}
+   ]
+  },
+  {
+   "unid": "C1257A1B00000012",
+   "subject": "良率波动排查顺序（组内共识）",
+   "author": "李工",
+   "modified": "2026-10-28T09:15:00",
+   "body_text": "先查 SPC 趋势确认漂移起点；再用 WIP 反查问题批次经过的机台，重点看 PM 后恢复的机台；然后看 METRO 的 particle 阶跃；最后查未处理的 CRITICAL 告警。Q-time 超时的 lot 一律先 Hold，不可直接放行。",
+   "body_html": "",
+   "attachments": []
+  },
+  {
+   "unid": "C1257A1B00000013",
+   "subject": "METRO-01 每日校准注意事项",
+   "author": "王工",
+   "modified": "2026-10-25T17:05:00",
+   "body_text": "每日 Energy Check 前先确认机台预热 30 分钟以上；标准片用完后立即放回恒温柜；校准记录必须回填到 Notes 的校准台账库（notes://METROAPP/C1257A1B000000FE/0/C1257A1B000000AA）。",
+   "body_html": "",
+   "attachments": []
+  }
+ ]
+}

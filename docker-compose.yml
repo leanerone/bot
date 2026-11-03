@@ -1,0 +1,25 @@
+# 生产参考部署: LLM 推理服务 + 数据库。
+# 应用本体 (app/) 也可直接 python -m uvicorn 启动 (见 README)。
+services:
+  vllm:  # 需 NVIDIA GPU + 驱动; 无 GPU 时保持 config.yaml -> llm.mock: true
+    image: vllm/vllm-openai:latest
+    # 官方镜像文档为准; 下面以 Qwen 32B AWQ 量化版为例
+    command: ["--model", "Qwen/Qwen2.5-32B-Instruct-AWQ", "--max-model-len", "8192"]
+    ports: ["8000:8000"]
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    # 使用 GPU: Docker Standalone 加 --gpus all; Swarm/K8s 用 deploy.resources.gpu
+    restart: unless-stopped
+
+  postgres:  # 预留: 审计/对话记录落库; pgvector 也可作为生产向量库替换 LocalVectorStore
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: changeme   # 部署前务必修改
+      POSTGRES_DB: fabbot
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:

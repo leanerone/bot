@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Fab Bot · 半导体工厂智能助手</title>
+<style>
+  body{font-family:"Microsoft YaHei",system-ui,sans-serif;background:#0f141a;color:#e6e6e6;margin:0;display:flex;justify-content:center}
+  .app{width:min(860px,100%);display:flex;flex-direction:column;height:100vh}
+  header{padding:14px 18px;border-bottom:1px solid #232b36;font-weight:600}
+  header small{color:#8b98a5;font-weight:400;margin-left:8px}
+  #chat{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+  .msg{max-width:88%;padding:10px 14px;border-radius:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+  .user{align-self:flex-end;background:#2563eb;border-radius:12px 12px 2px 12px}
+  .bot{align-self:flex-start;background:#1a222d;border:1px solid #2a3542;border-radius:12px 12px 12px 2px}
+  .meta{margin-top:8px;font-size:12px;color:#8b98a5}
+  .meta code{color:#9ecbff}
+  table{border-collapse:collapse;margin-top:8px;font-size:13px}
+  td,th{border:1px solid #2a3542;padding:4px 10px;text-align:left}
+  footer{display:flex;gap:10px;padding:14px 18px;border-top:1px solid #232b36}
+  input{flex:1;background:#1a222d;border:1px solid #2a3542;color:#e6e6e6;border-radius:8px;padding:10px 12px;font-size:14px}
+  button{background:#2563eb;border:0;color:#fff;border-radius:8px;padding:10px 18px;cursor:pointer}
+  .hint{padding:0 18px 10px;color:#8b98a5;font-size:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>⚙️ Fab Bot <small>知识问答 · 数据查询</small></header>
+  <div id="chat"></div>
+  <div class="hint">试试: 「最近的未处理告警有哪些？」 「ETCH 区几台机台是 DOWN 的？」 「射频功率漂移怎么处理？」</div>
+  <footer>
+    <input id="q" placeholder="输入问题, 回车发送…" onkeydown="if(event.key==='Enter')send()">
+    <button onclick="send()">发送</button>
+  </footer>
+</div>
+<script>
+const chat = document.getElementById('chat');
+function add(cls, html){const d=document.createElement('div');d.className='msg '+cls;d.innerHTML=html;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;}
+function esc(s){return (s??'').toString().replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function renderTable(cols, rows){
+  let h='<table><tr>'+cols.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr>';
+  for(const r of rows.slice(0,50)) h+='<tr>'+r.map(v=>`<td>${esc(v)}</td>`).join('')+'</tr>';
+  return h+'</table>'+(rows.length>50?`<div class="meta">(仅显示前 50 / 共 ${rows.length} 行)</div>`:'');
+}
+async function send(){
+  const input=document.getElementById('q'); const q=input.value.trim(); if(!q)return;
+  input.value=''; add('user', esc(q));
+  const box=add('bot','思考中…');
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+    const data=await r.json();
+    if(!r.ok){box.innerHTML='⚠️ '+esc(data.detail||('HTTP '+r.status));return;}
+    if(data.type==='sql'){
+      box.innerHTML=`<div>SQL: <code>${esc(data.sql)}</code></div>`+renderTable(data.columns,data.rows)
+        +`<div class="meta">返回 ${data.row_count} 行 · 只读查询</div>`;
+    }else{
+      let h=esc(data.answer);
+      if(data.sources&&data.sources.length) h+='<div class="meta">依据: '+data.sources.map(s=>`[${s.idx}] ${esc(s.source)} (相似度 ${s.score})`).join(' · ')+'</div>';
+      box.innerHTML=h;
+    }
+  }catch(e){box.innerHTML='⚠️ 请求失败: '+esc(e.message);}
+}
+add('bot','你好! 我是 Fab 演示助手 🤖\n我可以:\n· 查数据 —— 例如「最近未处理的告警」「P1234 最近一周的良率」\n· 答知识 —— 例如「腔压越限如何处置」(基于知识库, 附引用来源)\n当前运行在 Mock 模式, 可完整演示流程; 接入 vLLM 后回答质量显著提升。');
+</script>
+</body>
+</html>
