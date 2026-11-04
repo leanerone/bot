@@ -71,11 +71,13 @@ pre.res{background:#10161f;color:#d8e2ef;border-radius:9px;padding:12px;font-siz
     <div class="tab" data-t="users" onclick="showTab('users')">用户</div>
     <div class="tab" data-t="audit" onclick="showTab('audit')">审计日志</div>
     <div class="tab" data-t="kb" onclick="showTab('kb')">知识库</div>
+    <div class="tab" data-t="sess" onclick="showTab('sess')">会话管理</div>
   </div>
   <div class="wrap" id="tab-stats"></div>
   <div class="wrap" id="tab-users" style="display:none"></div>
   <div class="wrap" id="tab-audit" style="display:none"></div>
   <div class="wrap" id="tab-kb" style="display:none"></div>
+  <div class="wrap" id="tab-sess" style="display:none"></div>
 </div>
 <script>
 const $=id=>document.getElementById(id);
@@ -99,11 +101,12 @@ async function check(){
 }
 function showTab(t){
   document.querySelectorAll(".tab").forEach(el=>el.classList.toggle("on",el.dataset.t===t));
-  ["stats","users","audit","kb"].forEach(x=>$("tab-"+x).style.display=x===t?"":"none");
+  ["stats","users","audit","kb","sess"].forEach(x=>$("tab-"+x).style.display=x===t?"":"none");
   if(t==="stats")loadStats();
   if(t==="users")loadUsers();
   if(t==="audit")loadAudit();
   if(t==="kb")renderKb();
+  if(t==="sess")loadAdminSessions();
 }
 
 /* ── 统计 ── */
@@ -211,6 +214,24 @@ function renderKb(){
   loadKbCount();
   loadSources();
 }
+async function loadAdminSessions(){
+  const rows=(await (await fetch("/api/admin/sessions?limit=200")).json()).sessions.map(s=>`<tr>
+    <td style="max-width:120px">${esc((s.id||"").slice(0,14))}…</td>
+    <td>${esc(s.username||"?")}</td>
+    <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(s.title)}">${esc(s.title)}</td>
+    <td>${s.message_count}</td><td>${esc(s.updated_at)}</td>
+    <td><button class="btn warn" onclick="adminDelSession('${s.id}')">删除</button></td></tr>`).join("");
+  $("tab-sess").innerHTML=`
+    <div class="toolbar"><b>全用户会话 (最新 200 个)</b>
+      <button class="btn gray" onclick="loadAdminSessions()">刷新</button></div>
+    <table><tr><th>会话ID</th><th>用户</th><th>标题</th><th>消息数</th><th>更新时间</th><th>操作</th></tr>${rows||'<tr><td colspan="6">(暂无)</td></tr>'}</table>`;
+}
+async function adminDelSession(id){
+  if(!confirm("确认删除该会话 (含全部消息)?"))return;
+  const r=await fetch(`/api/admin/sessions/${id}`,{method:"DELETE"});
+  if(!r.ok){alert((await r.json()).detail||"删除失败")}
+  loadAdminSessions();
+}
 async function loadSources(){
   const sources=(await (await fetch("/api/admin/kb/sources")).json()).sources;
   const rows=sources.map(s=>`<tr>
@@ -218,6 +239,12 @@ async function loadSources(){
     <td>${s.chunks}</td>
     <td><button class="btn warn" onclick="delSource('${esc(s.source).replace(/'/g,"\\'")}')">删除</button></td></tr>`).join("");
   $("srcTable").innerHTML=`<table><tr><th>来源</th><th>片段数</th><th>操作</th></tr>${rows||'<tr><td colspan="3">(空)</td></tr>'}</table>`;
+}
+async function viewSource(name){
+  const j=await (await fetch("/api/admin/kb/source-chunks?name="+encodeURIComponent(name))).json();
+  $("kbRes").textContent=`来源: ${j.source} (共 ${j.chunks.length} 片段)\n\n` +
+    j.chunks.map((c,i)=>`── 片段 ${i+1} ──\n${c.text}`).join("\n\n");
+  $("kbRes").scrollIntoView({behavior:"smooth"});
 }
 async function delSource(name){
   if(!confirm("确认从知识库删除该来源全部片段?"))return;
