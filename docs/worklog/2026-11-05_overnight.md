@@ -71,3 +71,16 @@
 ### P7 告警推送 (01:00 完成)
 - app/notify/webhook.py: 企微+钉钉群机器人, 统一 send 入口, 推送审计留痕
 - POST /api/admin/notify/test (admin) 验证配置; httpx MockTransport 单测 3 项
+
+### P9 代码自审 (01:05 完成)
+- 引入 ruff + pyproject.toml (line-length 120), 全量 lint 清零 (修复未用导入/分号/未用变量/超长行)
+
+### P10 意图路由 v2 (01:07 完成)
+- app/api/intent.py: 强业务信号(3分)+动作词(2分)+知识问法负分(-3/-2), 阈值 2
+- 替换 routes 单正则; tests/test_intent.py 16 个典型问法回归 (含易混淆: "怎么处理E0010告警"->kb)
+- 过程修复: 信号组循环解包错误导致 10 测试失败 -> 修正后 47 tests 全绿
+
+### P11 前端体验增强 (01:15 完成)
+- 会话搜索框 / 来源折叠(默认3条+展开) / SQL复制按钮 / 会话导出 Markdown
+- 过程发现并修复: 补丁经 bash heredoc 传输把 JS 字符串里的 \n 变成真实换行导致整页脚本失效
+  -> 建立"node --check 提取脚本"校验环节, 修复后浏览器实测全部恢复 + 新功能就位

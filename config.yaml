@@ -28,6 +28,13 @@ sqlbot:
 audit:
   path: "data/audit.log"              # 审计双写: JSONL 文件 + SQLite (v4.0)
 
+# 告警轮询守护 (v4.0): 定时扫描只读告警 -> 群推送。默认关闭, 确认推送内容后再开
+watcher:
+  enabled: false
+  interval_minutes: 10
+  levels: [ALARM, CRITICAL]
+  platform: wechat                  # wechat | dingtalk | both | none(仅审计)
+
 # 告警/通知推送 (v4.0): webhook 地址含密钥, 勿提交到公开仓库
 notify:
   wechat_webhook: ""                  # 企业微信群机器人地址 (https://qyapi.weixin.qq.com/...)

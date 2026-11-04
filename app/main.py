@@ -18,6 +18,9 @@ from app.api.routes import router
 from app.config import ROOT, abs_path, cfg
 from app.rag.ingest import get_store, ingest_dir
 from app.store import db
+from app.watcher.alarm_watcher import start_if_enabled
+
+_watcher = None
 
 
 def _bootstrap() -> None:
@@ -36,8 +39,12 @@ def _bootstrap() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global _watcher
     _bootstrap()
+    _watcher = start_if_enabled()  # config watcher.enabled=false 时为 None
     yield
+    if _watcher:
+        _watcher.stop()
 
 
 def create_app() -> FastAPI:
