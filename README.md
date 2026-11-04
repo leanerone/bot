@@ -79,8 +79,8 @@ vllm serve Qwen/Qwen2.5-32B-Instruct-AWQ --port 8000 --max-model-len 8192
 ## 质量与评测
 
 ```bash
-python -m pytest tests -q      # 44 项单元/接口测试
-python eval/run_eval.py        # 离线评测: 知识命中率 100%, SQL 通过率 100% (评测集 30 条)
+python -m pytest tests -q      # 63 项单元/接口测试
+python eval/run_eval.py        # 离线评测: 知识/SQL/意图 三项 100% (评测集 49 条)
 ```
 
 ## 目录结构
