@@ -127,3 +127,17 @@ def kb_rebuild(request: Request):
         summary["notes"] = ingest_notes_export(str(notes_dir))
     summary["kb_chunks"] = len(get_store())
     return {"ok": True, **summary}
+
+
+@router.get("/kb/sources")
+def kb_sources(request: Request):
+    require_role(request, "admin")
+    return {"sources": get_store().list_sources()}
+
+
+@router.delete("/kb/sources")
+def kb_delete_source(request: Request, name: str):
+    """按来源删除知识片段 (文档下线/换版)。磁盘文档不受影响, 可重新导入。"""
+    require_role(request, "admin")
+    removed = get_store().delete_by_source(name)
+    return {"ok": True, "removed": removed, "kb_chunks": len(get_store())}

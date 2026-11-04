@@ -205,6 +205,16 @@ table.rt tr:nth-child(even) td{background:#faf6f3}
   </main>
 </div>
 <div id="overlay" onclick="toggleSidebar()"></div>
+<div id="srcModal" style="display:none;position:fixed;inset:0;background:rgba(10,14,20,.6);z-index:50"
+  onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#fff;border-radius:14px;max-width:680px;margin:9vh auto;padding:20px 24px;max-height:78vh;overflow:auto">
+    <h3 id="srcModalTitle" style="margin:0 0 10px;font-size:15px"></h3>
+    <pre id="srcModalBody" style="white-space:pre-wrap;font-family:inherit;font-size:13.5px;line-height:1.7;color:#1d2733;background:#f7f8fa;border:1px solid #e4e8ee;border-radius:10px;padding:14px"></pre>
+    <div style="text-align:right;margin-top:10px">
+      <button class="tbtn" onclick="document.getElementById('srcModal').style.display='none'">关闭</button>
+    </div>
+  </div>
+</div>
 <script>
 /* ───────── 常量与状态 ───────── */
 const CHIPS=[
@@ -245,6 +255,15 @@ function mdToHtml(src){
 function copyText(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{
   const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();
   document.execCommand("copy");ta.remove()})}
+function showSrcModal(el){
+  $("srcModalTitle").textContent=`${el.dataset.full ? el.dataset.src : "来源"} (相似度 ${el.dataset.score||"-"})`;
+  $("srcModalBody").textContent=el.dataset.full||"(无内容)";
+  $("srcModal").style.display="block";
+}
+document.addEventListener("click",e=>{
+  const c=e.target.closest(".src");
+  if(c)showSrcModal(c);
+});
 function cur(){return sessions.find(s=>s.id===activeId)}
 function saveActive(){/* 会话在服务端, 前端不持久化 */}
 
@@ -303,6 +322,14 @@ async function delSession(id){
   if(activeId===id)activeId=null;
   renderAll();
 }
+async function renameSession(id){
+  const s=sessions.find(x=>x.id===id);if(!s)return;
+  const t=prompt("新标题:", s.title||"");
+  if(!t||!t.trim())return;
+  const r=await fetch(`/api/sessions/${id}`,{method:"PATCH",
+    headers:{"Content-Type":"application/json"},body:JSON.stringify({title:t.trim()})});
+  if(r.ok){await loadSessions();renderSidebar();if(activeId===id)$("title").textContent=t.trim()}
+}
 function delCurrent(){if(activeId)delSession(activeId)}
 function exportSession(){
   const s=cur();if(!s||!s.messages||!s.messages.length){alert("当前会话为空");return}
@@ -330,9 +357,10 @@ function renderSidebar(){
   sessions.filter(s=>!kw||(s.title||"").toLowerCase().includes(kw)).forEach(s=>{
     const d=document.createElement("div");
     d.className="sess"+(s.id===activeId?" active":"");
-    d.innerHTML=`<span class="t">${esc(s.title)}</span><span class="d">${esc(fmtDay(s.ts))}</span><span class="x" title="删除">×</span>`;
+    d.innerHTML=`<span class="t">${esc(s.title)}</span><span class="d">${esc(fmtDay(s.ts))}</span><span class="x r" title="重命名">✎</span><span class="x" title="删除">×</span>`;
     d.onclick=e=>{
-      if(e.target.classList.contains("x")){delSession(s.id);return}
+      if(e.target.classList.contains("x")&&!e.target.classList.contains("r")){delSession(s.id);return}
+      if(e.target.classList.contains("r")){renameSession(s.id);return}
       openSession(s.id)};
     box.appendChild(d);
   });
@@ -353,7 +381,8 @@ function renderStatus(h){
 function srcHtml(sources){
   if(!sources||!sources.length)return"";
   const chips=sources.map(s=>
-    `<span class="src"><b>[${s.idx}]</b> ${esc(s.source)} <span>· ${s.score}</span></span>`).join("");
+    `<span class="src" data-full="${esc(s.text||s.excerpt||"")}" data-src="${esc(s.source)}" data-score="${s.score}" style="cursor:pointer" title="点击查看片段全文">
+     <b>[${s.idx}]</b> ${esc(s.source)} <span>· ${s.score}</span></span>`).join("");
   const more=sources.length>3?`<button class="more" onclick="this.parentElement.classList.toggle('expanded');
     this.textContent=this.parentElement.classList.contains('expanded')?'收起来源':'展开全部 ${sources.length} 条'">展开全部 ${sources.length} 条</button>`:"";
   return `<div class="sources">${chips}${more}</div>`;

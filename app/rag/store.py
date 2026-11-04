@@ -69,6 +69,28 @@ class LocalVectorStore:
             self._matrix = self.vectors / norm
         return self._matrix
 
+    def list_sources(self) -> List[Dict[str, Any]]:
+        """知识库来源清单 (来源名 -> 片段数), 管理运维用。"""
+        counter: Dict[str, int] = {}
+        for m in self.metas:
+            counter[m["source"]] = counter.get(m["source"], 0) + 1
+        return [{"source": s, "chunks": c} for s, c in sorted(counter.items())]
+
+    def delete_by_source(self, source: str) -> int:
+        """按来源删除全部片段 (文档下线/换版时用), 返回删除条数。"""
+        with self._lock:
+            keep_idx = [i for i, m in enumerate(self.metas) if m["source"] != source]
+            removed = len(self.metas) - len(keep_idx)
+            if removed == 0:
+                return 0
+            if self.vectors.shape[0] > 0:
+                self.vectors = self.vectors[np.array(keep_idx, dtype=int)]
+            self.metas = [self.metas[i] for i in keep_idx]
+            self._keys = {self._key(m) for m in self.metas}
+            self._matrix = None
+            self.save()
+            return removed
+
     def search(self, query_vec: List[float], k: int = 5) -> List[Dict[str, Any]]:
         """余弦相似度 Top-K, 返回 [{score, source, text}, ...]"""
         if len(self.metas) == 0:

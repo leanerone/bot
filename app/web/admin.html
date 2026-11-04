@@ -201,9 +201,29 @@ function renderKb(){
       <button class="btn warn" onclick="doRebuild()">全量重建 (清空向量库重新导入)</button>
     </div>
     <div class="thin" style="margin-bottom:10px;color:var(--muted);font-size:12.5px">
-      重建 = 清空向量库 → 重新导入常规文档目录 + Notes 导出目录 (如存在)。适合文档批量更新后执行。</div>
-    <pre class="res" id="kbRes">操作结果将显示在这里…</pre>`;
+      重建 = 清空向量库 → 重新导入常规文档目录 + Notes 导出目录 (如存在)。适合文档批量更新后执行。
+      删除某个来源只是从知识库摘除, 磁盘文档不受影响。</div>
+    <pre class="res" id="kbRes">操作结果将显示在这里…</pre>
+    <div class="toolbar" style="margin-top:18px"><b>来源清单</b>
+      <button class="btn gray" onclick="loadSources()">刷新</button></div>
+    <div id="srcTable"></div>`;
   loadKbCount();
+  loadSources();
+}
+async function loadSources(){
+  const sources=(await (await fetch("/api/admin/kb/sources")).json()).sources;
+  const rows=sources.map(s=>`<tr>
+    <td style="max-width:560px;word-break:break-all">${esc(s.source)}</td>
+    <td>${s.chunks}</td>
+    <td><button class="btn warn" onclick="delSource('${esc(s.source).replace(/'/g,"\\'")}')">删除</button></td></tr>`).join("");
+  $("srcTable").innerHTML=`<table><tr><th>来源</th><th>片段数</th><th>操作</th></tr>${rows||'<tr><td colspan="3">(空)</td></tr>'}</table>`;
+}
+async function delSource(name){
+  if(!confirm("确认从知识库删除该来源全部片段?"))return;
+  const r=await fetch("/api/admin/kb/sources?name="+encodeURIComponent(name),{method:"DELETE"});
+  const j=await r.json();
+  $("kbRes").textContent=JSON.stringify(j,null,2);
+  loadSources();loadKbCount();
 }
 async function loadKbCount(){
   const h=await (await fetch("/api/health")).json();
