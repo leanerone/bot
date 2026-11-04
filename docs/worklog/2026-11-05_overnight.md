@@ -29,3 +29,24 @@
   前端保持零构建单文件哲学 (index.html + admin.html)
 - 风险预案: 若某阶段超时, 先保证 P1~P3 (核心交付) 与 P8 (回归收尾), P5~P7 可裁剪
 
+
+### P1 持久化与认证 (00:41 完成)
+- app/store/db.py: SQLite(WAL) DAO — users/auth_tokens/chat_sessions/messages/audit + 统计
+- app/store/security.py: PBKDF2-HMAC-SHA256 口令散列 (12 万次迭代, 纯标准库)
+- 内置账号种子 (admin/zhangsan/guest), 首启自动创建, 日志提示改密
+- tests/test_store_auth.py: 9 项测试 (散列/认证/禁用/令牌过期/改密吊销/会话CRUD/评分/审计)
+
+### P2 API 升级 (00:44 完成)
+- 认证: POST /api/auth/login|logout, GET /api/auth/me (HttpOnly Cookie + Bearer 双通道)
+- RBAC: viewer < user < admin (app/api/deps.py), 401/403 语义完整
+- 会话: GET/POST /api/sessions, GET messages, PATCH, DELETE (归属校验)
+- 问答持久化: /api/chat 与 /api/chat/stream 均落库; 流式 result/done 事件携带 message_id
+- 反馈: POST /api/feedback (up/down/none, 归属校验)
+- 审计双写: JSONL 文件 + SQLite; 管理端: /api/admin/users|audit|stats|kb/rebuild (防自我锁定)
+- tests/test_api_v4.py: 14 项 (401/403/角色/会话CRUD/反馈归属/用户管理/统计)
+
+### P3 前端与管理后台 (00:55 完成, 浏览器实测通过)
+- index.html: 登录层 + 服务端会话列表 + 消息反馈(👍/👎) + 用户卡 + 管理后台入口
+- admin.html (新增): 统计卡 / 用户管理(增/改角色/禁用/重置密码) / 审计查询 / 知识库重建
+- 实测修复 2 个 bug: ① boot IIFE 命名导致登录后不加载 ② loadSessions 刷新丢失 messages 引用
+- 浏览器截图验证: 登录页/主界面/SQL卡片/统计页/用户管理页 全部正常
