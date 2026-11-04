@@ -18,7 +18,7 @@ from app.api import audit as audit_mod
 from app.api.deps import require_role, require_user
 from app.api.intent import classify
 from app.api.limits import check_rate
-from app.config import abs_path, cfg
+from app.config import ROOT, abs_path, cfg
 from app.llm.client import LLMError
 from app.rag import pipeline
 from app.rag.ingest import get_store, ingest_dir
@@ -272,10 +272,19 @@ def feedback(body: FeedbackIn, request: Request):
 
 # ── 知识库 ──
 
+def _safe_kb_dir(path: Optional[str], default: str) -> str:
+    """知识导入路径白名单: 必须位于项目根目录内 (防路径穿越)。"""
+    target = abs_path(path or default).resolve()
+    root = ROOT.resolve()
+    if not str(target).startswith(str(root)):
+        raise HTTPException(400, "路径越界: 只允许导入项目目录内的文档")
+    return str(target)
+
+
 @router.post("/kb/ingest")
 def kb_ingest(request: Request, body: Optional[IngestIn] = None):
     user = require_role(request, "user")
-    target = (body.path if body and body.path else None) or "data/knowledge"
+    target = _safe_kb_dir(body.path if body and body.path else None, "data/knowledge")
     summary = ingest_dir(target)
     audit_mod.record(user["username"], "/api/kb/ingest", "", target, 0)
     return {"ok": True, "dir": target, **summary}
@@ -291,10 +300,10 @@ def kb_ingest_notes(request: Request, body: Optional[NotesIngestIn] = None):
         view = (body.view if body and body.view else None) or cfg("notes.domino.view", "($All)")
         summary = ingest_notes_domino(client, view=view)
     else:
-        target = (body.path if body and body.path else None) or cfg(
-            "notes.export_dir", "data/notes_export"
+        target = _safe_kb_dir(
+            body.path if body and body.path else None, cfg("notes.export_dir", "data/notes_export")
         )
-        summary = ingest_notes_export(str(abs_path(target)))
+        summary = ingest_notes_export(target)
     audit_mod.record(user["username"], "/api/kb/ingest_notes", mode, "", 0)
     return {"ok": True, "mode": mode, **summary}
 

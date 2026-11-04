@@ -67,3 +67,4 @@ notes:
 # 限流 (v4.0): 每用户每分钟问答次数; 0 = 不限 (多实例部署时换 Redis 实现)
 ratelimit:
   chat_per_minute: 30
+  login_per_5min: 10                  # 登录防爆破: 同一 用户名+IP 5 分钟内最多 10 次

@@ -1,7 +1,7 @@
 """认证路由: 登录 / 登出 / 当前用户。"""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -18,7 +18,10 @@ class LoginIn(BaseModel):
 
 
 @router.post("/auth/login")
-def login(body: LoginIn, response: Response):
+def login(body: LoginIn, request: Request):
+    from app.api.limits import check_login
+
+    check_login(f"{body.username.strip()}@{request.client.host if request.client else '?'}")
     user = db.authenticate(body.username.strip(), body.password)
     if not user:
         db.log_audit(body.username.strip(), "/api/auth/login", "", "", 0, status="fail")
