@@ -14,7 +14,7 @@ rag:
   store_path: "data/vector_store"
   chunk_size: 500                     # 中文按字符数
   chunk_overlap: 80
-  top_k: 5
+  top_k: 6
   hybrid: true                        # BM25+向量混合检索 (RRF 融合), 机台号等关键词更稳
   embedding:
     provider: mock                    # mock | openai (兼容接口, 生产建议 BGE-M3)

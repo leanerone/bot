@@ -1,10 +1,10 @@
 {
- "time": "2026-11-05T01:41:13",
+ "time": "2026-11-05T01:57:10",
  "mode": "offline",
- "topk": 5,
+ "topk": 6,
  "kb": {
-  "total": 26,
-  "hit": 26,
+  "total": 34,
+  "hit": 34,
   "hit_rate": 1.0,
   "avg_ms": 0
  },
@@ -15,8 +15,8 @@
   "avg_ms": 0
  },
  "intent": {
-  "total": 41,
-  "correct": 41,
+  "total": 49,
+  "correct": 49,
   "accuracy": 1.0,
   "misses": []
  },
@@ -31,7 +31,7 @@
     "Stability"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
    "ms": 1
   },
@@ -45,7 +45,7 @@
     "Seasoning"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
    "ms": 0
   },
@@ -59,7 +59,7 @@
     "关注"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
@@ -73,7 +73,7 @@
     "Q-time"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
@@ -87,7 +87,7 @@
     "Particle"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
@@ -101,9 +101,9 @@
     "HF Last"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-007",
@@ -115,7 +115,7 @@
     "显影"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
@@ -128,9 +128,9 @@
     "上锁挂牌"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-009",
@@ -142,8 +142,8 @@
     "MFC"
    ],
    "miss_terms": [],
-   "n_sources": 4,
-   "top1_source": "工艺常见问题FAQ.md",
+   "n_sources": 6,
+   "top1_source": "CMP研磨机台异常处置SOP.md",
    "ms": 0
   },
   {
@@ -155,8 +155,8 @@
     "洁净腔体"
    ],
    "miss_terms": [],
-   "n_sources": 4,
-   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "n_sources": 6,
+   "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
   {
@@ -168,8 +168,8 @@
     "升压率"
    ],
    "miss_terms": [],
-   "n_sources": 4,
-   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "n_sources": 6,
+   "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
   {
@@ -181,7 +181,7 @@
     "干泵"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
    "ms": 0
   },
@@ -195,9 +195,9 @@
     "告警"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-014",
@@ -210,7 +210,7 @@
     "预热",
     "标准片"
    ],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
@@ -223,9 +223,9 @@
     "FSE"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-016",
@@ -237,7 +237,7 @@
    "miss_terms": [
     "泄漏"
    ],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
@@ -250,8 +250,8 @@
     "抽真空"
    ],
    "miss_terms": [],
-   "n_sources": 4,
-   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "n_sources": 6,
+   "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
   {
@@ -263,7 +263,7 @@
     "护目镜"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
    "ms": 0
   },
@@ -276,7 +276,7 @@
     "规格"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
@@ -289,7 +289,7 @@
     "刻蚀速率"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
@@ -303,7 +303,7 @@
     "水温"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
    "ms": 0
   },
@@ -317,8 +317,8 @@
     "lot"
    ],
    "miss_terms": [],
-   "n_sources": 4,
-   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "n_sources": 6,
+   "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
   {
@@ -330,7 +330,7 @@
     "SF6"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
    "ms": 0
   },
@@ -342,7 +342,7 @@
     "20%"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
    "ms": 0
   },
@@ -354,8 +354,8 @@
     "开度反馈"
    ],
    "miss_terms": [],
-   "n_sources": 4,
-   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "n_sources": 6,
+   "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
   {
@@ -367,8 +367,118 @@
     "防静电"
    ],
    "miss_terms": [],
-   "n_sources": 4,
+   "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-027",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "D0101",
+    "Energy Check",
+    "Hold"
+   ],
+   "miss_terms": [],
+   "n_sources": 6,
+   "top1_source": "LITHO光刻机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-028",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "显影液温度",
+    "喷嘴",
+    "PEB"
+   ],
+   "miss_terms": [],
+   "n_sources": 6,
+   "top1_source": "LITHO光刻机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-029",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "回温"
+   ],
+   "miss_terms": [
+    "胶批号"
+   ],
+   "n_sources": 6,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-030",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "UV 防护镜",
+    "LOTO"
+   ],
+   "miss_terms": [],
+   "n_sources": 6,
+   "top1_source": "LITHO光刻机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-031",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "研磨垫",
+    "Slurry",
+    "Break-in"
+   ],
+   "miss_terms": [],
+   "n_sources": 6,
+   "top1_source": "CMP研磨机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-032",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "90%",
+    "预警",
+    "盘数"
+   ],
+   "miss_terms": [],
+   "n_sources": 6,
+   "top1_source": "CMP研磨机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-033",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "Slurry",
+    "研磨垫",
+    "保持环"
+   ],
+   "miss_terms": [],
+   "n_sources": 6,
+   "top1_source": "LITHO光刻机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-034",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "防碱手套",
+    "护目镜"
+   ],
+   "miss_terms": [],
+   "n_sources": 6,
+   "top1_source": "工艺常见问题FAQ.md",
    "ms": 0
   },
   {
@@ -396,7 +506,7 @@
    "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
    "rows": 4,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-004",
@@ -423,7 +533,7 @@
    "sql": "SELECT lot_id, product, layer, qty FROM wip ORDER BY lot_id LIMIT 20",
    "rows": 20,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-007",
@@ -450,7 +560,7 @@
    "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-010",
@@ -486,7 +596,7 @@
    "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-014",
@@ -495,7 +605,7 @@
    "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
    "rows": 4,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-015",
@@ -504,7 +614,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   }
  ]
 }

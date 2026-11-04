@@ -49,6 +49,59 @@ def read_document(path: Path) -> str:
     raise ValueError(f"暂不支持的文件类型: {suffix}")
 
 
+def chunk_markdown(text: str, size: int = 500, overlap: int = 80) -> List[str]:
+    """Markdown 感知分块: 以 #/## 标题为硬边界; 每块携带 H1/H2 面包屑前缀。
+
+    动机: SOP 文档的"标题 -> 处置步骤"常被普通分块切开, 导致标题词
+    (如"研磨速率漂移")与正文词 (如"研磨垫/Slurry")落在不同块, 检索互相稀释。
+    面包屑让每块都携带标题词, 混合检索的向量路与 BM25 路同时受益。
+    """
+    h1 = ""
+    cur_bc = ""
+    cur_paras: List[str] = []
+    out_paras: List[tuple] = []  # (breadcrumb, 段落文本)
+
+    def flush_section() -> None:
+        nonlocal cur_paras
+        body = "\n".join(cur_paras).strip()
+        if body:
+            out_paras.append((cur_bc, body))
+        cur_paras = []
+
+    for ln in text.split("\n"):
+        if ln.startswith("## "):
+            flush_section()
+            cur_bc = (h1 + " / " if h1 else "") + ln.lstrip("# ").strip()
+            cur_paras = [ln]
+        elif ln.startswith("# "):
+            flush_section()
+            h1 = ln.lstrip("# ").strip()
+            cur_bc = h1
+            cur_paras = [ln]
+        else:
+            cur_paras.append(ln)
+    flush_section()
+
+    chunks: List[str] = []
+    buf = ""
+    for bc, body in out_paras:
+        piece = (bc + "\n" + body) if bc else body
+        if buf and len(buf) + len(piece) + 1 <= size:
+            buf = f"{buf}\n{piece}"
+        else:
+            if buf:
+                chunks.append(buf)
+            if len(piece) <= size:
+                buf = piece
+            else:
+                step = max(1, size - overlap)
+                chunks.extend(piece[i : i + size] for i in range(0, len(piece), step))
+                buf = ""
+    if buf:
+        chunks.append(buf)
+    return chunks
+
+
 def chunk_text(text: str, size: int = 500, overlap: int = 80) -> List[str]:
     """按空行分段后贪心组块; 超长段落硬切并保留 overlap 重叠 (中文按字符数)。"""
     paras = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
@@ -93,7 +146,9 @@ def ingest_dir(kb_dir: str, store: Optional[LocalVectorStore] = None) -> Dict:
         except Exception as exc:  # 单个文件失败不阻塞整批
             errors.append(f"{path.name}: {exc}")
             continue
-        chunks = chunk_text(text, size=size, overlap=overlap)
+        chunks = (chunk_markdown(text, size=size, overlap=overlap)
+                  if path.suffix.lower() == ".md"
+                  else chunk_text(text, size=size, overlap=overlap))
         if not chunks:
             continue
         rel = str(path.relative_to(root))

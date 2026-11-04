@@ -65,7 +65,7 @@ def _sql_eval(item: dict) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--topk", type=int, default=5)
+    parser.add_argument("--topk", type=int, default=6)
     parser.add_argument("--llm", action="store_true", help="额外统计 LLM 生成回答的引用率")
     args = parser.parse_args()
 

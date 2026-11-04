@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "description": "Fab Bot 离线评测集: kb=知识检索命中, sql=Text2SQL 可执行性。共 40 条; 上线前请用真实问题扩充至 50~100 条",
+  "description": "Fab Bot 离线评测集: kb=知识检索命中, sql=Text2SQL 可执行性。共 49 条; 上线前请用真实问题扩充至 50~100 条",
   "items": [
     {
       "id": "kb-001",
@@ -374,6 +374,83 @@
       "expect_columns": [
         "eqp_id",
         "status"
+      ]
+    },
+    {
+      "id": "kb-027",
+      "type": "kb",
+      "question": "曝光能量漂移怎么处理？",
+      "expect": [
+        "D0101",
+        "Energy Check",
+        "Hold"
+      ]
+    },
+    {
+      "id": "kb-028",
+      "type": "kb",
+      "question": "显影异常要检查什么？",
+      "expect": [
+        "显影液温度",
+        "喷嘴",
+        "PEB"
+      ]
+    },
+    {
+      "id": "kb-029",
+      "type": "kb",
+      "question": "换胶批次要注意什么？",
+      "expect": [
+        "胶批号",
+        "回温"
+      ]
+    },
+    {
+      "id": "kb-030",
+      "type": "kb",
+      "question": "UV 光源检修要注意什么？",
+      "expect": [
+        "UV 防护镜",
+        "LOTO"
+      ]
+    },
+    {
+      "id": "kb-031",
+      "type": "kb",
+      "question": "研磨速率漂移怎么处理？",
+      "expect": [
+        "研磨垫",
+        "Slurry",
+        "Break-in"
+      ]
+    },
+    {
+      "id": "kb-032",
+      "type": "kb",
+      "question": "研磨垫寿命怎么管理？",
+      "expect": [
+        "90%",
+        "预警",
+        "盘数"
+      ]
+    },
+    {
+      "id": "kb-033",
+      "type": "kb",
+      "question": "CMP 的日常点检有哪些？",
+      "expect": [
+        "Slurry",
+        "研磨垫",
+        "保持环"
+      ]
+    },
+    {
+      "id": "kb-034",
+      "type": "kb",
+      "question": "Slurry 操作要注意什么安全？",
+      "expect": [
+        "防碱手套",
+        "护目镜"
       ]
     }
   ]

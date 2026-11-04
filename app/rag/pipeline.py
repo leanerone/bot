@@ -49,7 +49,7 @@ def _retrieve(question: str, top_k: Optional[int] = None) -> Tuple[Optional[str]
     store = get_store()
     if len(store) == 0:
         return None, []
-    k = int(top_k or cfg("rag.top_k", 5))
+    k = int(top_k or cfg("rag.top_k", 6))
 
     vec_hits = store.search(get_embedder().embed_one(question), k * 2)
     merged: dict = {}
