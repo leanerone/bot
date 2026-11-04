@@ -1,18 +1,17 @@
-# Fab Bot —— 半导体工厂智能助手 (脚手架)
+# Fab Bot —— 半导体工厂智能助手
 
-面向半导体工厂内网的 AI 助手项目脚手架, 包含两个可运行的核心模块:
+面向半导体工厂内网的 AI 助手, 交付级试点版本 (v4.0):
 
 | 模块 | 功能 | 位置 |
 |---|---|---|
-| 知识问答 | SOP/手册/FAQ 的 RAG 问答, 强制引用来源 | `app/rag/` |
-| 数据查询 | 自然语言 -> SQL, 只读执行, 带 200 行上限 | `app/sqlbot/` |
+| 知识问答 | SOP/手册/Notes 的 RAG 问答, BM25+向量混合检索, 强制引用溯源 | `app/rag/` |
+| 数据查询 | 自然语言 -> SQL, 只读执行, 安全校验, 200 行上限 | `app/sqlbot/` |
+| 平台 | 登录认证 / 三级角色 / 服务端会话 / 消息反馈 / 审计双写 / 管理后台 / 群推送 | `app/store/` `app/api/` `app/notify/` |
 
-Web 界面 (`app/web/index.html`, 单文件无构建依赖): 多会话管理 (localStorage
-持久化)、流式打字机输出 (SSE)、Markdown 渲染、引用来源卡片、SQL 结果表格、
-意图提示、会话清空/复制, 支持移动端。
-
-配套文档: [整体技术方案](docs/半导体工厂智能助手技术方案.docx) ·
-[选型与算力评估](docs/选型与算力评估.md)
+配套文档: [技术方案](docs/半导体工厂智能助手技术方案.docx) ·
+[部署手册](docs/DEPLOY.md) · [用户手册](docs/USER_GUIDE.md) ·
+[验收清单](docs/ACCEPTANCE.md) · [选型与算力评估](docs/选型与算力评估.md) ·
+[CHANGELOG](CHANGELOG.md)
 
 ## 快速开始 (Mock 模式, 无 GPU 可跑)
 
@@ -21,102 +20,95 @@ python -m pip install -r requirements.txt
 python -m uvicorn app.main:app --port 8100
 ```
 
-打开 http://127.0.0.1:8100 即可对话。启动时自动完成:
-1. 生成演示数据库 (机台/在制/良率/告警四张表);
-2. 导入 `data/knowledge/` 下的示例知识文档。
+打开 http://127.0.0.1:8100 登录 (首次启动自动创建内置账号):
 
-试试: 「最近未处理的告警有哪些」「ETCH 区几台机台是 DOWN 的」「射频功率漂移怎么处理」
+| 账号 | 密码 | 角色 | 权限 |
+|---|---|---|---|
+| admin | admin123 | admin | 全部 + 管理后台 (**上线后立即改密**) |
+| zhangsan | user123 | user | 问答 + 知识库导入 |
+| guest | guest123 | viewer | 只读问答 |
 
-## 接入真实 LLM (vLLM)
+启动时自动: 建库 (用户/会话/审计) → 生成演示数据 → 导入示例知识文档。
 
-```bash
-# 在 GPU 服务器上 (显存需求见 docs/选型与算力评估.md)
-pip install vllm
-vllm serve Qwen/Qwen2.5-32B-Instruct-AWQ --port 8000 --max-model-len 8192
-```
+## 核心能力
 
-然后把 `config.yaml` 改两处:
-```yaml
-llm:
-  mock: false
-  base_url: "http://<GPU服务器IP>:8000/v1"
-  model: "Qwen/Qwen2.5-32B-Instruct-AWQ"
-```
-
-Embedding 同理: `rag.embedding.provider` 改为 `openai`, 指向 BGE-M3 服务
-(如 TEI: `text-embeddings-inference`), 或先用 Ollama 跑小模型验证。
-
-Ollama 快速替代: `ollama serve` 后 `base_url: "http://127.0.0.1:11434/v1"`。
+- **知识问答**: 「射频功率漂移怎么处理？」→ 带引用来源的回答; 检索不到明确告知, 不编造
+- **数据查询**: 「最近未处理的告警」→ 只读 SQL + 表格 (禁增删改/禁注释/强制 LIMIT/只读连接)
+- **流式输出**: SSE 打字机效果, 支持中途停止
+- **多轮追问**: 携带最近对话历史 (先问告警再问"那 ETCH-02 呢")
+- **会话管理**: 服务端持久化, 换设备可回看, 支持删除/改名
+- **质量反馈**: 回答 👍/👎, 后台统计好评率
+- **HCL Notes 接入**: 导出目录模式 / Domino HTTP 模式, doclink 解析, 附件入库
+- **告警推送**: 企微/钉钉群机器人 webhook (`app/notify/`)
+- **管理后台** `/admin`: 统计 / 用户管理 / 审计查询 / 知识库重建
 
 ## 常用接口
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| POST | `/api/chat` | 统一入口, 自动分流知识问答/数据查询 |
-| POST | `/api/chat/stream` | 流式版统一入口 (SSE: meta→delta*/result→done) |
-| POST | `/api/kb/ask` | 知识问答直连 |
-| POST | `/api/data/query` | 数据查询直连 |
-| POST | `/api/kb/ingest` | 导入文档 (`{"path": "data/knowledge"}` 可省略) |
-| POST | `/api/kb/ingest_notes` | 导入 HCL Notes 内容 (export/domino 双模式) |
-| GET | `/api/health` | 健康检查 (含模型模式/知识库规模) |
-| GET | `/docs` | Swagger 交互文档 |
+| POST | `/api/auth/login` · `/api/auth/logout` | 登录/登出 (HttpOnly Cookie) |
+| POST | `/api/chat` · `/api/chat/stream` | 统一入口 (自动分流, 流式为 SSE) |
+| GET/POST/PATCH/DELETE | `/api/sessions…` | 服务端会话管理 |
+| POST | `/api/kb/ingest` · `/api/kb/ingest_notes` | 知识导入 (user+) |
+| POST | `/api/feedback` | 回答质量反馈 |
+| GET | `/api/admin/stats` · `/audit` · `/users` | 管理端 (admin) |
+| POST | `/api/admin/kb/rebuild` · `/notify/test` | 知识库重建 / 推送测试 |
+| GET | `/api/health` · `/docs` | 健康检查 / Swagger |
 
-## 导入自己的知识库
+## 接入真实 LLM (vLLM)
 
-把 SOP/手册 (.md/.txt/.docx/.pdf) 放进 `data/knowledge/`, 然后:
-`curl -X POST http://127.0.0.1:8100/api/kb/ingest`
-(.docx/.pdf 需先 `pip install python-docx pdfplumber`; 扫描件建议先用 MinerU 做 OCR)
+```bash
+vllm serve Qwen/Qwen2.5-32B-Instruct-AWQ --port 8000 --max-model-len 8192
+```
 
-## 接入 HCL Notes (Lotus Notes)
+`config.yaml` → `llm.mock: false`, `base_url` 指向推理服务; Embedding 同理
+(`rag.embedding.provider: openai`, 建议 BGE-M3)。Ollama 快速替代见 docs/DEPLOY.md。
 
-Notes 内容存于 Domino 服务器 .nsf 库, 不能直接读文件, 须经接口抽取。三种路线:
+## 知识库与 Notes
 
-| 路线 | 方式 | 适用 |
-|---|---|---|
-| 定时导出 (推荐) | 导出代理 / COM 脚本产出 JSON+附件 → `POST /api/kb/ingest_notes` | 安全, 与中间库原则一致 |
-| Domino HTTP | Bot 用只读账号经 `?OpenDocument` 等经典 URL 拉取 | 实时性好, 需 IT 开通 |
-| COM 自动化 | `tools/export_notes_com.py` (需本机 Notes 客户端 + pywin32) | 无服务器权限时的过渡 |
+- 常规文档 (.md/.txt/.docx/.pdf) 放 `data/knowledge/` → 后台「导入」或重建
+- HCL Notes: 导出 JSON 放 `data/notes_export/` (COM 导出脚本 `tools/export_notes_com.py`)
+- 重复导入自动去重; 检索为 BM25+向量混合 (RRF), 精确关键词 (机台号/告警码) 召回更稳
 
-导出 JSON 契约与 Domino 客户端实现见 `app/adapters/hcl_notes.py`;
-导出目录样例见 `data/demo/notes_export_sample/`。
+## 质量与评测
 
-要点:
-- **notes:// 文档链接**: 私有协议, Bot 点不开; 适配器会解析出链接 UNID 并在
-  知识条目上标注「文档链接」, 目标文档需纳入导出范围才能被检索
-- **富文本**: 经 HTML 渲染转纯文本 (保留列表/换行); 表格类内容建议整理成附件
-- **附件**: .docx/.pdf/.md 等附件自动落入既有解析管线
-- **权限**: 导出/拉取账号对目标库只读, 导出文件落盘位置注意密级
-- 快速试跑: `POST /api/kb/ingest_notes` body `{"path": "data/demo/notes_export_sample"}`
+```bash
+python -m pytest tests -q      # 44 项单元/接口测试
+python eval/run_eval.py        # 离线评测: 知识命中率 100%, SQL 通过率 100% (评测集 30 条)
+```
 
 ## 目录结构
 
 ```
 app/
-├── llm/        # LLM 网关 (OpenAI 兼容协议 + Mock) 与 Prompt 模板
-├── rag/        # 知识问答: 导入分块/向量库/检索生成
-├── sqlbot/     # 数据查询: schema 语义层 / SQL 安全校验 / Text2SQL
-├── adapters/   # MES 适配器接口 + HCL Notes 接入 + 演示数据 (真实接入写在这里)
-├── api/        # 路由 + 审计日志
-└── web/        # 聊天界面 (单页, 无需前端构建)
-tools/          # HCL Notes COM 导出脚本等辅助工具
-data/
-├── knowledge/  # 待导入的 SOP/手册 (已有 2 个示例)
-└── demo/       # 演示库 (seed_demo_db.py 可重置)
-tests/          # python -m pytest tests -q
+├── llm/        # LLM 网关 (OpenAI 兼容 + 流式 + Mock) 与 Prompt 模板
+├── rag/        # 知识问答: 导入分块/去重向量库/BM25/混合检索/引用溯源
+├── sqlbot/     # 数据查询: 语义层 / SQL 安全校验 / Text2SQL
+├── adapters/   # MES 适配器接口 + HCL Notes 接入 + 演示数据
+├── store/      # SQLite 持久化 + PBKDF2 认证 (v4.0)
+├── api/        # 认证/问答/会话/反馈/审计/管理路由
+├── notify/     # 企微/钉钉群推送 (v4.0)
+└── web/        # index.html 聊天界面 + admin.html 管理后台 (零构建)
+data/           # knowledge 知识文档 / notes_export Notes 导出 / app.db 会话库
+eval/           # 评测集与评测脚本 (v4.0)
+deploy/         # 生产 compose / nginx 样例 / 备份脚本 (v4.0)
+tools/          # Notes COM 导出脚本
+docs/           # 方案/部署/用户手册/验收清单/工作日志
 ```
 
 ## 生产化改造清单
 
-- [ ] 向量库: `LocalVectorStore` -> Milvus / pgvector (接口已对齐, 换实现即可)
-- [ ] 数据源: `sqlbot.db_path` / `adapters.MESAdapter` -> IT 侧只读中间库
-- [ ] 权限: 对接公司 LDAP/SSO, 按角色过滤可查询的表与列
-- [ ] 审计: JSONL -> 数据库/日志平台, 按资安要求配置保留期
-- [ ] 入口: 接入企业微信/钉钉/飞书机器人, 推广成本远低于独立 Web
-- [ ] HTTPS 与部署: 见 `Dockerfile` + `docker-compose.yml` (vLLM + pgvector)
-- [ ] 评测: 建 50~100 条真实问题评测集, 每次改动回归
+- [ ] 接真实 MES 中间库 (`adapters.MESAdapter` 只读接口)
+- [ ] 对接公司 SSO/LDAP 替换内置账号
+- [ ] SQLite → Postgres (app/store/db.py 接口已隔离)
+- [ ] 企微/钉钉应用消息替代 Web 入口 (推广成本更低)
+- [ ] 意图路由升级为模型分类 (现为关键词粗分)
+- [ ] 评测集扩充至 50~100 条真实问题
 
-## 已实现的安全设计
+## 安全设计 (已实现)
 
-- SQL 只放行单条 SELECT、禁注释、强制 LIMIT<=200、sqlite 以 `mode=ro` 只读打开
-- RAG 答案强制引用来源编号, 检索不到明确说"未找到"
-- 所有 `/api/chat` 请求落审计日志 (用户/问题/耗时)
+- SQL: 单条 SELECT 白名单 + 禁注释 + LIMIT≤200 + sqlite 只读模式打开
+- RAG: 强制引用来源, 检索不到明确回复"未找到"
+- 认证: PBKDF2 (12 万次迭代) 散列, HttpOnly Cookie, 令牌过期清理, 禁用即时生效
+- 权限: viewer/user/admin 三级, API 层逐点校验, 管理端防自我锁定
+- 审计: 全问答留痕 (JSONL + SQLite), 登录失败亦记录

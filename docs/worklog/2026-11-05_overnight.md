@@ -50,3 +50,24 @@
 - admin.html (新增): 统计卡 / 用户管理(增/改角色/禁用/重置密码) / 审计查询 / 知识库重建
 - 实测修复 2 个 bug: ① boot IIFE 命名导致登录后不加载 ② loadSessions 刷新丢失 messages 引用
 - 浏览器截图验证: 登录页/主界面/SQL卡片/统计页/用户管理页 全部正常
+
+### P4 检索升级 (00:54 完成)
+- app/rag/bm25.py: 纯 Python BM25 (中文 bigram+ASCII 词元, 无分词器依赖)
+- pipeline._retrieve: 向量+BM25 双路召回, RRF (1/(60+rank)) 融合, rag.hybrid 配置开关
+- LocalVectorStore.add 去重 (来源+正文唯一键) —— 修复多次导入产生 16 条重复片段的问题
+
+### P5 评测体系 (00:58 完成, 全绿)
+- eval/evalset.json: 18 条知识 + 12 条 SQL 评测项
+- eval/run_eval.py: 离线命中率/可执行率/耗时 + 可选 LLM 引用率, 输出 eval/report.md|json
+- 评测驱动的两个修复: ① store 重复片段污染 top-5 (去重解决) ② 命中判定需扫全文 (sources 增带 text)
+- Mock LLM 补充 COUNT/AVG 统计类 SQL 规则
+- 最终: 知识命中率 18/18 (100%), SQL 通过率 12/12 (100%), 全部 41+3 测试通过
+
+### P6 交付物 (01:00 完成)
+- docs/DEPLOY.md 部署手册 / USER_GUIDE.md 用户手册 / ACCEPTANCE.md 验收清单 (A~G 七组 30 项)
+- CHANGELOG.md / deploy/docker-compose.prod.yml / nginx.conf.sample / backup.sh|.ps1
+- 修复 backup.sh 危险操作 (误删活动 WAL)
+
+### P7 告警推送 (01:00 完成)
+- app/notify/webhook.py: 企微+钉钉群机器人, 统一 send 入口, 推送审计留痕
+- POST /api/admin/notify/test (admin) 验证配置; httpx MockTransport 单测 3 项
