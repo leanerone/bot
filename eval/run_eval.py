@@ -131,11 +131,14 @@ def main() -> None:
     lines += [f"- {r['id']}: 缺少 {r['miss_terms']}" for r in kb_rows if not r["hit"]] or ["- (无)"]
     lines += ["", "## SQL 失败项", ""]
     failed = [r for r in sql_rows if not r["pass"]]
-    lines += [f"- {r['id']}: {r.get('error') or ('缺列 ' + str(r.get('missing_columns')))}" for r in failed] or ["- (无)"]
+    lines += [
+        f"- {r['id']}: {r.get('error') or ('缺列 ' + str(r.get('missing_columns')))}"
+        for r in failed
+    ] or ["- (无)"]
     (ROOT / "eval" / "report.md").write_text("\n".join(lines), encoding="utf-8")
 
     print("\n".join(lines[:12]))
-    print(f"\n报告: eval/report.md / eval/report.json")
+    print("\n报告: eval/report.md / eval/report.json")
     sys.exit(0 if kb_hit == len(kb_rows) and sql_pass == len(sql_rows) else 1)
 
 

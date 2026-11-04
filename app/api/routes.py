@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from app.adapters.hcl_notes import ingest_notes_domino, ingest_notes_export
 from app.api import audit as audit_mod
-from app.api.deps import public_user, require_role, require_user
+from app.api.deps import require_role, require_user
 from app.config import abs_path, cfg
 from app.llm.client import LLMError
 from app.rag import pipeline

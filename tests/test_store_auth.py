@@ -90,7 +90,7 @@ def test_chat_session_and_messages():
     u = db.create_user("chatu", "pass123")
     s = db.create_chat_session(u["id"], "夜班问题")
     assert s["title"] == "夜班问题"
-    mid = db.add_message(s["id"], "user", "", "腔压越限怎么办")
+    db.add_message(s["id"], "user", "", "腔压越限怎么办")
     db.add_message(s["id"], "assistant", "kb", "先 Hold 批次…",
                    sources=[{"idx": 1, "source": "SOP.md"}], sql=None)
     msgs = db.list_messages(s["id"])

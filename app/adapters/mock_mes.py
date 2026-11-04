@@ -49,7 +49,7 @@ def seed_demo_db(db_path: Optional[Path] = None, force: bool = False) -> Path:
         lots.append((
             f"A24{i:05d}", random.choice(products), random.choice(layers),
             random.randint(100, 800), random.choice([24, 25]),
-            random.choice([e[0] for e in eqps] + ["", ""]),
+            random.choice([e[0] for e in eqps] + ["", ""]),  # 部分批次未上机台
         ))
     conn.executemany("INSERT INTO wip VALUES (?,?,?,?,?,?)", lots)
 

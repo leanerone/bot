@@ -1,0 +1,7 @@
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+# SQL 字符串与中文文案天然较长, 本项目统一 120 列

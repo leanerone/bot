@@ -114,12 +114,22 @@ class MockLLM:
     def _sql_answer(question: str) -> str:
         q = question.lower()
         rules = [
-            (r"平均(良率|合格率|die)|良率.*平均", "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20"),
-            (r"几台|多少台|机台数量|数量.*机台", "SELECT eqp_group, COUNT(*) AS cnt FROM eqp WHERE status = 'DOWN' GROUP BY eqp_group ORDER BY cnt DESC LIMIT 20"),
-            (r"良率|合格率", "SELECT dt, product, die_yield FROM yield_daily ORDER BY dt DESC LIMIT 10"),
-            (r"告警|报警|alarm", "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10"),
-            (r"机台|设备|eqp", "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20"),
-            (r"批次|lot|在制|wip", "SELECT lot_id, product, layer, qty FROM wip ORDER BY lot_id LIMIT 20"),
+            (r"平均(良率|合格率|die)|良率.*平均",
+             "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily "
+             "WHERE dt >= DATE('now', 'localtime', '-7 day') "
+             "GROUP BY product ORDER BY avg_yield DESC LIMIT 20"),
+            (r"几台|多少台|机台数量|数量.*机台",
+             "SELECT eqp_group, COUNT(*) AS cnt FROM eqp WHERE status = 'DOWN' "
+             "GROUP BY eqp_group ORDER BY cnt DESC LIMIT 20"),
+            (r"良率|合格率",
+             "SELECT dt, product, die_yield FROM yield_daily ORDER BY dt DESC LIMIT 10"),
+            (r"告警|报警|alarm",
+             "SELECT dt, eqp_id, level, code, message FROM alarms "
+             "WHERE handled = 0 ORDER BY dt DESC LIMIT 10"),
+            (r"机台|设备|eqp",
+             "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20"),
+            (r"批次|lot|在制|wip",
+             "SELECT lot_id, product, layer, qty FROM wip ORDER BY lot_id LIMIT 20"),
         ]
         for pattern, sql in rules:
             if re.search(pattern, q):

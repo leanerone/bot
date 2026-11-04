@@ -183,11 +183,14 @@ def update_user(user_id: str, role: Optional[str] = None, disabled: Optional[boo
         if role is not None:
             if role not in ("viewer", "user", "admin"):
                 raise ValueError(f"非法角色: {role}")
-            sets.append("role = ?"); args.append(role)
+            sets.append("role = ?")
+            args.append(role)
         if disabled is not None:
-            sets.append("disabled = ?"); args.append(1 if disabled else 0)
+            sets.append("disabled = ?")
+            args.append(1 if disabled else 0)
         if display_name is not None:
-            sets.append("display_name = ?"); args.append(display_name)
+            sets.append("display_name = ?")
+            args.append(display_name)
         if not sets:
             return False
         args.append(user_id)

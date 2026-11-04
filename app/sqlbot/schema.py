@@ -51,7 +51,8 @@ FEWSHOT = """问: ETCH 区现在有几台机台是 DOWN 的?
 SELECT COUNT(*) AS cnt FROM eqp WHERE eqp_group = 'ETCH' AND status = 'DOWN';
 
 问: 最近一周 P1234 的平均良率是多少?
-SELECT AVG(die_yield) AS avg_yield FROM yield_daily WHERE product = 'P1234' AND dt >= DATE('now', 'localtime', '-7 day');
+SELECT AVG(die_yield) AS avg_yield FROM yield_daily WHERE product = 'P1234'
+  AND dt >= DATE('now', 'localtime', '-7 day');
 
 问: 最近 10 条未处理的告警?
 SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10;"""
