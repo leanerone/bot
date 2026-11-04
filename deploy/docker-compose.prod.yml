@@ -1,0 +1,33 @@
+# 生产部署: bot 应用 + 数据卷。LLM 推理 (vLLM) 按 GPU 机器单独部署,
+# 通过 config.yaml -> llm.base_url 指向。
+services:
+  fabbot:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: fabbot
+    ports: ["8100:8100"]
+    volumes:
+      - fabbot-data:/srv/bot/data       # 会话/审计/向量库/演示库 持久化
+      - ../config.yaml:/srv/bot/config.yaml:ro
+    environment:
+      PYTHONIOENCODING: utf-8
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8100/api/health')"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  # 预留: 审计/会话库升级 Postgres 时启用 (app/store/db.py 按接口替换)
+  # postgres:
+  #   image: pgvector/pgvector:pg16
+  #   environment:
+  #     POSTGRES_PASSWORD: changeme
+  #     POSTGRES_DB: fabbot
+  #   volumes: [pgdata:/var/lib/postgresql/data]
+
+volumes:
+  fabbot-data:
+  # pgdata:

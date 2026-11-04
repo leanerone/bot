@@ -28,6 +28,11 @@ sqlbot:
 audit:
   path: "data/audit.log"              # 审计双写: JSONL 文件 + SQLite (v4.0)
 
+# 告警/通知推送 (v4.0): webhook 地址含密钥, 勿提交到公开仓库
+notify:
+  wechat_webhook: ""                  # 企业微信群机器人地址 (https://qyapi.weixin.qq.com/...)
+  dingtalk_webhook: ""                # 钉钉群机器人地址 (https://oapi.dingtalk.com/...)
+
 # 持久化 (v4.0)
 store:
   db_path: "data/app.db"              # 用户/会话/消息/审计 SQLite 库 (WAL)

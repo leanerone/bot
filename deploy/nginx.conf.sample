@@ -1,0 +1,22 @@
+# Fab Bot HTTPS 反向代理样例 (nginx), 证书由公司 CA 签发
+server {
+    listen 443 ssl;
+    server_name fabbot.example.fab;
+
+    ssl_certificate     /etc/nginx/ssl/fabbot.crt;
+    ssl_certificate_key /etc/nginx/ssl/fabbot.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    client_max_body_size 20m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8100;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # 流式输出 (SSE) 必须关闭缓冲
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 300s;
+    }
+}

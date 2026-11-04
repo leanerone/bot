@@ -33,6 +33,25 @@ class PasswordIn(BaseModel):
     password: str
 
 
+class NotifyIn(BaseModel):
+    platform: str = "wechat"        # wechat | dingtalk | both
+    text: str
+
+
+# ── 告警推送测试 ──
+
+@router.post("/notify/test")
+def notify_test(body: NotifyIn, request: Request):
+    """向群机器人发送一条测试消息 (admin), 验证 webhook 配置。"""
+    admin = require_role(request, "admin")
+    from app.notify import webhook
+    try:
+        result = webhook.send(body.platform, body.text or "Fab Bot 推送测试", user=admin["username"])
+    except webhook.NotifyError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True, "result": result}
+
+
 # ── 用户管理 ──
 
 @router.get("/users")
