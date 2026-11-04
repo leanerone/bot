@@ -165,3 +165,8 @@
 ### P29 预验收自测 (02:04 完成, 29/29)
 - scripts/pre_acceptance.py: 按 ACCEPTANCE.md 逐项自动执行 (A部署/B权限/C知识/D查询/E Notes/F后台/G稳定)
 - 报告: docs/worklog/pre-acceptance.md (28->29 项, C3 调整为护栏存在性检查+Mock 说明)
+
+### P30 文档一致性走查 (02:05 完成)
+- 文档引用的接口 (chat/stream, kb/ingest_notes, notify/test, audit/export...) 与实际路由全部对上
+- deploy/ 四个交付文件存在性确认
+- 进入守夜循环: 每 20 分钟 check_all 门禁, 06:00 终验
