@@ -1,12 +1,18 @@
 # Fab Bot —— 半导体工厂智能助手
 
-面向半导体工厂内网的 AI 助手, 交付级试点版本 (v4.0):
+面向半导体工厂内网的 AI 助手, 交付级试点版本 (v4.1):
 
 | 模块 | 功能 | 位置 |
 |---|---|---|
 | 知识问答 | SOP/手册/Notes 的 RAG 问答, BM25+向量混合检索, 强制引用溯源 | `app/rag/` |
 | 数据查询 | 自然语言 -> SQL, 只读执行, 安全校验, 200 行上限 | `app/sqlbot/` |
-| 平台 | 登录认证 / 三级角色 / 服务端会话 / 消息反馈 / 审计双写 / 管理后台 / 群推送 | `app/store/` `app/api/` `app/notify/` |
+| 平台 | 登录认证 / 三级角色 / 限流 / 服务端会话 / 消息反馈 / 审计双写 / 管理后台 / 群推送 | `app/store/` `app/api/` `app/notify/` |
+
+![对话与数据查询](docs/img/ui-chat-sql.png)
+
+![知识问答与来源溯源](docs/img/ui-chat-citation.png)
+
+![管理后台](docs/img/ui-admin-stats.png)
 
 配套文档: [技术方案](docs/半导体工厂智能助手技术方案.docx) ·
 [部署手册](docs/DEPLOY.md) · [用户手册](docs/USER_GUIDE.md) ·
