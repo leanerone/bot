@@ -14,6 +14,9 @@ from app.store import db
 
 def test_rate_limit():
     db.use(Path(tempfile.mkdtemp()) / "rl.db")
+    from app.api.limits import _hits
+
+    _hits.clear()  # 清掉其他用例留下的计数
     CFG.setdefault("ratelimit", {})["chat_per_minute"] = 3
     try:
         with TestClient(app) as c:
@@ -22,7 +25,8 @@ def test_rate_limit():
                      for _ in range(4)]  # data/query 走同一限流, 每次很快
             assert codes[:3] == [200, 200, 200] and codes[3] == 429
     finally:
-        CFG["ratelimit"]["chat_per_minute"] = 0  # 还原为不限, 不影响其他用例
+        _hits.clear()
+        CFG["ratelimit"]["chat_per_minute"] = 30  # 还原默认, 不影响其他用例
 
 
 def test_rate_limit_disabled():

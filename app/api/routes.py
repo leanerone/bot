@@ -109,6 +109,7 @@ def chat(body: AskIn, request: Request):
 def chat_stream(body: AskIn, request: Request):
     """流式统一入口 (SSE)。事件: meta(含 session_id) -> (delta*+done | result) -> error(可选)。"""
     user = require_user(request)
+    check_rate(user["id"])
     q = body.question.strip()
     if not q:
         raise HTTPException(400, "问题不能为空")
