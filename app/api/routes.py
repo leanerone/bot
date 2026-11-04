@@ -126,22 +126,28 @@ def chat_stream(body: AskIn, request: Request):
         t0 = time.time()
         intent = "kb"
         result_holder: dict = {}
+        persisted = False
         try:
             if _DATA_HINT.search(q):
                 intent = "sql"
                 yield sse("meta", {"type": "sql", "session_id": session["id"]})
                 result_holder = {"type": "sql", **text2sql.query(q, history=history)}
-                yield sse("result", result_holder)
+                mid = _persist_answer(session["id"], result_holder)
+                persisted = True
+                yield sse("result", {**result_holder, "message_id": mid})
             else:
                 yield sse("meta", {"type": "kb", "session_id": session["id"]})
-                deltas = []
+                deltas, sources = [], []
                 for ev in pipeline.ask_stream(q, history=history):
                     if ev["type"] == "delta":
                         deltas.append(ev["text"])
                         yield sse("delta", {"text": ev["text"]})
                     else:
-                        yield sse("done", {"sources": ev.get("sources", [])})
-                result_holder = {"type": "kb", "answer": "".join(deltas)}
+                        sources = ev.get("sources", [])
+                result_holder = {"type": "kb", "answer": "".join(deltas), "sources": sources}
+                mid = _persist_answer(session["id"], result_holder)
+                persisted = True
+                yield sse("done", {"sources": sources, "message_id": mid})
         except SQLRejected as exc:
             yield sse("error", {"message": f"SQL 安全校验未通过: {exc}"})
         except LLMError as exc:
@@ -149,7 +155,7 @@ def chat_stream(body: AskIn, request: Request):
         except Exception as exc:  # 兜底: 流式链路不让服务挂掉
             yield sse("error", {"message": f"服务异常: {exc}"})
         finally:
-            if result_holder.get("answer") or result_holder.get("type") == "sql":
+            if result_holder and not persisted:
                 try:
                     _persist_answer(session["id"], result_holder)
                 except Exception:

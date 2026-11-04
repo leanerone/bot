@@ -15,6 +15,18 @@ html,body{height:100%}
 body{margin:0;font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
 #app{display:flex;height:100vh}
 
+/* ── 登录层 ── */
+#login{position:fixed;inset:0;background:rgba(10,14,20,.72);display:flex;align-items:center;justify-content:center;z-index:99}
+.login-card{background:#fff;border-radius:16px;padding:34px 38px;width:360px;box-shadow:0 18px 60px rgba(0,0,0,.35)}
+.login-card h2{margin:0 0 4px;font-size:20px}
+.login-card .sub{color:var(--muted);font-size:12.5px;margin-bottom:20px}
+.login-card input{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:9px;margin-bottom:12px;font-size:14px;outline:none}
+.login-card input:focus{border-color:var(--accent)}
+.login-card button{width:100%;padding:11px;background:var(--accent);border:0;color:#fff;border-radius:9px;font-size:15px;font-weight:600;cursor:pointer}
+.login-card button:hover{background:#c3764b}
+.login-card .err{color:var(--err);font-size:12.5px;min-height:18px;margin-bottom:6px}
+.login-card .tip{color:var(--muted);font-size:11.5px;margin-top:12px;line-height:1.7}
+
 /* ── 侧栏 ── */
 #sidebar{width:264px;background:var(--sidebar);color:#cfd6e0;display:flex;flex-direction:column;flex-shrink:0}
 .brand{padding:18px 18px 14px;border-bottom:1px solid #232d3c}
@@ -31,13 +43,20 @@ body{margin:0;font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;back
 .sess .d{font-size:11px;color:#69768a}
 .sess .x{color:#5d6a7e;font-size:14px;padding:0 3px;border-radius:5px}
 .sess .x:hover{color:#ff8a80;background:#2a3548}
-.status{margin:10px 14px 14px;padding:12px;background:var(--sidebar2);border-radius:11px;font-size:12.5px;line-height:1.9}
+.status{margin:10px 14px 8px;padding:12px;background:var(--sidebar2);border-radius:11px;font-size:12.5px;line-height:1.9}
 .status .row{display:flex;justify-content:space-between;gap:8px}
 .status .k{color:#7d8a9c}
 .badge{padding:1px 8px;border-radius:20px;font-size:11px;font-weight:600}
 .badge.mock{background:#3a2f14;color:#f5c451}
 .badge.real{background:#153427;color:#5fdba3}
 .badge.plain{background:#232d3c;color:#a9b4c4}
+.badge.role{background:#1d2a3f;color:#8fb7ff}
+.usercard{margin:0 14px 14px;padding:11px 12px;background:var(--sidebar2);border-radius:11px;font-size:12.5px;
+  display:flex;align-items:center;gap:8px}
+.usercard .u{flex:1;color:#e8edf4;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.usercard a{color:#8fb7ff;text-decoration:none;font-size:12px;margin-right:6px}
+.usercard button{background:none;border:1px solid #3a465a;color:#a9b4c4;border-radius:7px;font-size:11.5px;padding:3px 9px;cursor:pointer}
+.usercard button:hover{color:#fff}
 .links{padding:0 14px 16px;font-size:12px}
 .links a{color:#6d7d94;text-decoration:none;margin-right:12px}
 .links a:hover{color:#9fb3cc}
@@ -77,6 +96,9 @@ main{flex:1;display:flex;flex-direction:column;min-width:0}
 .itag.sql{background:#e3ecfb;color:#2a56a8}
 .meta .cp{border:none;background:none;color:#98a3b3;cursor:pointer;font-size:12px;padding:2px 4px}
 .meta .cp:hover{color:var(--text)}
+.rate{border:1px solid var(--border);background:#fff;border-radius:7px;padding:1px 7px;cursor:pointer;font-size:12px;color:#98a3b3}
+.rate.on-up{background:#e8f6ef;border-color:var(--ok);color:var(--ok)}
+.rate.on-down{background:#fdecea;border-color:var(--err);color:var(--err)}
 .cursor{display:inline-block;width:9px;height:16px;background:var(--accent);vertical-align:-2px;animation:blink 1s step-end infinite;border-radius:2px}
 @keyframes blink{50%{opacity:0}}
 .sources{margin-top:10px;border-top:1px dashed var(--border);padding-top:9px}
@@ -125,23 +147,39 @@ table.rt tr:nth-child(even) td{background:#faf6f3}
 </style>
 </head>
 <body>
+<div id="login" style="display:none">
+  <form class="login-card" onsubmit="doLogin(event)">
+    <h2>⚙️ Fab Bot 登录</h2>
+    <div class="sub">半导体工厂智能助手 · 内网系统</div>
+    <div class="err" id="loginErr"></div>
+    <input id="lu" placeholder="用户名" autocomplete="username">
+    <input id="lp" type="password" placeholder="密码" autocomplete="current-password">
+    <button type="submit">登 录</button>
+    <div class="tip">首次部署默认账号: admin / admin123 (上线后请立即修改)<br>角色: admin 管理 · user 问答+知识库 · viewer 只读问答</div>
+  </form>
+</div>
 <div id="app">
   <aside id="sidebar">
     <div class="brand"><h1>⚙️ Fab Bot</h1><small>半导体工厂智能助手</small></div>
     <button id="newChat">＋ 新会话</button>
     <div id="sessions"></div>
     <div class="status">
-      <div class="row"><span class="k">模型服务</span><span id="llmBadge"><span class="badge mock">检测中</span></span></div>
+      <div class="row"><span class="k">模型服务</span><span id="llmBadge"><span class="badge mock">–</span></span></div>
       <div class="row"><span class="k">知识库</span><span id="kbStat">–</span></div>
       <div class="row"><span class="k">Notes 接入</span><span id="notesStat" class="badge plain">–</span></div>
     </div>
-    <div class="links"><a href="/docs" target="_blank">API 文档</a><a href="https://github.com/leanerone/bot" target="_blank">源码</a></div>
+    <div class="usercard" id="usercard" style="display:none">
+      <span class="u" id="uname">–</span>
+      <a href="/admin" id="adminLink" style="display:none">后台</a>
+      <button onclick="logout()">退出</button>
+    </div>
+    <div class="links"><a href="/docs" target="_blank">API 文档</a></div>
   </aside>
   <main>
     <div id="topbar">
       <button id="hamb" onclick="toggleSidebar()">☰</button>
       <div class="title" id="title">新会话</div>
-      <button class="tbtn" onclick="clearSession()">清空</button>
+      <button class="tbtn" onclick="delCurrent()">删除会话</button>
     </div>
     <div id="chat"><div id="empty">
       <div class="logo">⚙️</div>
@@ -161,7 +199,7 @@ table.rt tr:nth-child(even) td{background:#faf6f3}
 </div>
 <div id="overlay" onclick="toggleSidebar()"></div>
 <script>
-/* ───────── 状态与持久化 ───────── */
+/* ───────── 常量与状态 ───────── */
 const CHIPS=[
   {t:"射频功率漂移怎么处理？",tag:"知识问答 · SOP 检索"},
   {t:"交班时最容易被漏掉的信息有哪些？",tag:"知识问答 · 经验库"},
@@ -169,19 +207,14 @@ const CHIPS=[
   {t:"ETCH 区现在有几台机台是 DOWN 的？",tag:"数据查询 · 只读"},
 ];
 const HINT_RE=/多少|几个|统计|查询|查一下|排名|top|趋势|良率|wip|在制|机台|告警|报警|数量|平均|最近/i;
-let sessions=[],activeId=null,abortCtl=null,generating=false;
-try{sessions=JSON.parse(localStorage.getItem("fabbot.sessions")||"[]")}catch(e){sessions=[]}
-activeId=localStorage.getItem("fabbot.active")||null;
-function persist(){localStorage.setItem("fabbot.sessions",JSON.stringify(sessions));
-  if(activeId)localStorage.setItem("fabbot.active",activeId);else localStorage.removeItem("fabbot.active")}
-function cur(){return sessions.find(s=>s.id===activeId)}
+let me=null,sessions=[],activeId=null,abortCtl=null,generating=false;
+const $=id=>document.getElementById(id);
 
 /* ───────── 工具 ───────── */
-const $=id=>document.getElementById(id);
 function esc(s){return (s??"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function now(){const d=new Date();return d.toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"})}
-function fmtDay(ts){const d=new Date(ts),n=new Date();const same=d.toDateString()===n.toDateString();
-  return same?d.toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}):
+function fmtDay(ts){const d=new Date(ts.replace?ts.replace(" ","T"):ts),n=new Date();
+  return d.toDateString()===n.toDateString()?d.toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}):
   d.toLocaleDateString("zh-CN",{month:"numeric",day:"numeric"})}
 function mdToHtml(src){
   const blocks=[];
@@ -195,7 +228,7 @@ function mdToHtml(src){
     const t=ln.trim();
     if(/^\u0000\d+\u0000$/.test(t)){flush();if(ul){out+="</ul>";ul=false}out+=blocks[+t.slice(1,-1)];continue}
     if(/^- /.test(ln)){flush();if(!ul){out+="<ul>";ul=true}out+=`<li>${ln.slice(2)}</li>`;continue}
-    if(/^#{1,4} /.test(t)){flush();if(ul){out+="</ul>";ul=false}out+=`<div class="mh" style="font-weight:700;margin:10px 0 4px">${t.replace(/^#+ /,"")}</div>`;continue}
+    if(/^#{1,4} /.test(t)){flush();if(ul){out+="</ul>";ul=false}out+=`<div style="font-weight:700;margin:10px 0 4px">${t.replace(/^#+ /,"")}</div>`;continue}
     if(t===""){flush();if(ul){out+="</ul>";ul=false}continue}
     para.push(ln);
   }
@@ -205,6 +238,65 @@ function mdToHtml(src){
 function copyText(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{
   const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();
   document.execCommand("copy");ta.remove()})}
+function cur(){return sessions.find(s=>s.id===activeId)}
+function saveActive(){/* 会话在服务端, 前端不持久化 */}
+
+/* ───────── 认证 ───────── */
+async function doLogin(e){
+  e.preventDefault();
+  const r=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:$("lu").value.trim(),password:$("lp").value})});
+  if(!r.ok){$("loginErr").textContent=(await r.json()).detail||"登录失败";return}
+  $("loginErr").textContent="";$("login").style.display="none";
+  await bootApp();
+}
+async function bootApp(){
+  if(!(await checkAuth())){$("login").style.display="flex";return}
+  fetch("/api/health").then(r=>r.json()).then(renderStatus).catch(()=>renderStatus(null));
+  await loadSessions();
+  renderAll();
+}
+async function logout(){
+  await fetch("/api/auth/logout",{method:"POST"});
+  me=null;sessions=[];activeId=null;renderAll();
+  $("login").style.display="flex";
+}
+async function checkAuth(){
+  const r=await fetch("/api/auth/me");
+  if(!r.ok){$("login").style.display="flex";return false}
+  me=(await r.json()).user;return true;
+}
+
+/* ───────── 服务端会话 ───────── */
+async function loadSessions(){
+  const r=await fetch("/api/sessions");
+  if(!r.ok)return;
+  const list=(await r.json()).sessions.map(s=>({id:s.id,title:s.title,ts:s.updated_at,count:s.message_count}));
+  // 保留已在前端加载过的消息数组 (服务端列表只含元数据)
+  sessions=list.map(n=>{const old=sessions.find(o=>o.id===n.id);if(old&&old.messages)n.messages=old.messages;return n});
+}
+async function openSession(id){
+  if(generating)return;
+  activeId=id;
+  const r=await fetch(`/api/sessions/${id}/messages`);
+  if(!r.ok)return;
+  const msgs=(await r.json()).messages.map(m=>m.role==="user"
+    ? {role:"user",text:m.content,ts:m.created_at}
+    : {role:"assistant",id:m.id,type:m.type||(m.sql_text?"sql":"kb"),text:m.type==="sql"||m.sql_text?m.sql_text:m.content,
+       sources:m.sources||[],sql:m.sql_text,columns:m.columns||[],rows:m.rows||[],row_count:m.row_count||0,
+       rating:m.rating,ts:m.created_at});
+  const s=sessions.find(x=>x.id===id);
+  if(s)s.messages=msgs;
+  renderAll();closeSidebar();
+}
+async function delSession(id){
+  if(!confirm("确认删除该会话?"))return;
+  await fetch(`/api/sessions/${id}`,{method:"DELETE"});
+  sessions=sessions.filter(s=>s.id!==id);
+  if(activeId===id)activeId=null;
+  renderAll();
+}
+function delCurrent(){if(activeId)delSession(activeId)}
 
 /* ───────── 渲染 ───────── */
 function renderSidebar(){
@@ -214,11 +306,16 @@ function renderSidebar(){
     d.className="sess"+(s.id===activeId?" active":"");
     d.innerHTML=`<span class="t">${esc(s.title)}</span><span class="d">${esc(fmtDay(s.ts))}</span><span class="x" title="删除">×</span>`;
     d.onclick=e=>{
-      if(e.target.classList.contains("x")){sessions=sessions.filter(x=>x.id!==s.id);
-        if(activeId===s.id)activeId=sessions[0]?sessions[0].id:null;persist();renderAll();return}
-      activeId=s.id;persist();renderAll();closeSidebar()};
+      if(e.target.classList.contains("x")){delSession(s.id);return}
+      openSession(s.id)};
     box.appendChild(d);
   });
+  // 用户卡
+  if(me){
+    $("usercard").style.display="flex";
+    $("uname").textContent=`${me.display_name||me.username} (${me.role})`;
+    $("adminLink").style.display=me.role==="admin"?"":"none";
+  }
 }
 function renderStatus(h){
   $("llmBadge").innerHTML=h&&h.llm
@@ -239,26 +336,39 @@ function tableHtml(cols,rows){
   if(rows.length>50)h+=`<div class="thin">仅显示前 50 行 / 共 ${rows.length} 行</div>`;
   return h;
 }
+function rateHtml(m){
+  if(!me||m.role!=="assistant"||!m.id)return"";
+  const up=m.rating==="up"?" on-up":"",down=m.rating==="down"?" on-down":"";
+  return `<button class="rate${up}" onclick="rate(${m.id},'up')">👍</button>
+          <button class="rate${down}" onclick="rate(${m.id},'down')">👎</button>`;
+}
+async function rate(id,val){
+  const s=cur();const m=s&&s.messages.find(x=>x.id===id);
+  const next=(m&&m.rating===val)?"none":val;
+  const r=await fetch("/api/feedback",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({message_id:id,rating:next})});
+  if(r.ok&&m)m.rating=next==="none"?null:next;
+  renderChat();
+}
 function bodyHtml(m){
   if(m.type==="sql"){
-    return `<pre class="code"><code>${esc(m.sql)}</code></pre>`+tableHtml(m.columns,m.rows)
-      +`<div class="meta"><span class="itag sql">数据查询</span><span>返回 ${m.row_count} 行 · 只读 SELECT · ${esc(m.ts||"")}</span></div>`;
+    return `<pre class="code"><code>${esc(m.sql||m.text)}</code></pre>`+tableHtml(m.columns,m.rows)
+      +`<div class="meta"><span class="itag sql">数据查询</span><span>返回 ${m.row_count??0} 行 · 只读 SELECT · ${esc(m.ts||"")}</span>${rateHtml(m)}</div>`;
   }
   if(m.error)return `<div class="card error">⚠️ ${esc(m.text)}</div>
     <div class="meta"><span>${esc(m.ts||"")}</span></div>`;
   return `<div class="card"><div class="md">${mdToHtml(m.text)}${generating&&m.streaming?'<span class="cursor"></span>':""}</div>
     ${srcHtml(m.sources)}
     <div class="meta"><span class="itag">知识问答</span><span>${esc(m.ts||"")}</span>
-      <button class="cp" onclick="copyText(this.closest('.msg').querySelector('.md').innerText)">复制全文</button></div></div>`;
+      <button class="cp" onclick="copyText(this.closest('.msg').querySelector('.md').innerText)">复制全文</button>${rateHtml(m)}</div></div>`;
 }
 function renderChat(){
-  const chat=$("chat"),s=cur();
-  const empty=$("empty");
-  if(!s||!s.messages.length){empty.style.display="";chat.querySelectorAll(":scope > .col").forEach(n=>n.remove());
-    $("title").textContent="新会话";return}
-  empty.style.display="none";
+  const chat=$("chat"),s=cur(),empty=$("empty");
   chat.querySelectorAll(":scope > .col").forEach(n=>n.remove());
-  $("title").textContent=s.title;
+  if(!s||!s.messages||!s.messages.length){
+    empty.style.display="";$("title").textContent="新会话";return}
+  empty.style.display="none";
+  $("title").textContent=s.title||"会话";
   const col=document.createElement("div");col.className="col";
   s.messages.forEach((m,i)=>{
     const d=document.createElement("div");
@@ -274,19 +384,18 @@ function renderAll(){renderSidebar();renderChat()}
 /* ───────── 发送与流式 ───────── */
 function historyFor(){
   const s=cur();if(!s)return[];
-  return s.messages.slice(-8).map(m=>({role:m.role,content:m.type==="sql"?("查询: "+m.text+" (SQL: "+m.sql+")"):m.text}));
+  return s.messages.slice(-8).map(m=>({role:m.role,content:m.type==="sql"?("查询: "+m.text):m.text}));
 }
 async function send(){
   const ta=$("q"),q=ta.value.trim();
-  if(!q||generating)return;
+  if(!q||generating||!me)return;
   ta.value="";autoGrow();$("intent").innerHTML="";
   let s=cur();
-  if(!s){s={id:"s"+Date.now(),title:q.slice(0,20)||"新会话",ts:Date.now(),messages:[]};
-    sessions.unshift(s);activeId=s.id}
-  s.ts=Date.now();
+  if(!s){s={id:null,title:q.slice(0,20),messages:[]};sessions.unshift(s);activeId=null}
   s.messages.push({role:"user",text:q,ts:now()});
-  const am={role:"assistant",type:"kb",text:"",sources:[],ts:"",streaming:true};
-  s.messages.push(am);persist();renderChat();
+  const am={role:"assistant",id:null,type:"kb",text:"",sources:[],rating:null,ts:"",streaming:true};
+  s.messages.push(am);
+  renderChat();
   await stream(q,am,s);
 }
 async function stream(q,am,s){
@@ -297,18 +406,23 @@ async function stream(q,am,s){
   let raf=0;
   const schedule=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint();
     const c=$("chat");c.scrollTop=c.scrollHeight})};
+  const isNew=!s.id;
   try{
     const resp=await fetch("/api/chat/stream",{method:"POST",signal:abortCtl.signal,
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({question:q,history:historyFor().slice(0,-2)})});
+      body:JSON.stringify({question:q,session_id:s.id,history:historyFor().slice(0,-2)})});
     const reader=resp.body.getReader(),dec=new TextDecoder();
     let buf="";
     const handle=(ev,data)=>{
-      if(ev==="meta"){am.type=data.type}
+      if(ev==="meta"){am.type=data.type;
+        if(data.session_id){s.id=data.session_id;activeId=data.session_id;
+          if(isNew)loadSessions().then(renderSidebar)}
+        if(data.type==="sql"){s.title=s.title||"数据查询"}}
       else if(ev==="delta"){am.text+=data.text;schedule()}
-      else if(ev==="done"){am.sources=data.sources||[]}
+      else if(ev==="done"){am.sources=data.sources||[];if(data.message_id)am.id=data.message_id}
       else if(ev==="result"){Object.assign(am,{type:"sql",text:data.sql,sql:data.sql,
-        columns:data.columns,rows:data.rows,row_count:data.row_count})}
+        columns:data.columns,rows:data.rows,row_count:data.row_count});
+        if(data.message_id)am.id=data.message_id}
       else if(ev==="error"){am.error=true;am.text=data.message||"未知错误"}
     };
     while(true){
@@ -326,28 +440,28 @@ async function stream(q,am,s){
         if(data){try{handle(ev,JSON.parse(data))}catch(e){}}
       }
     }
-    am.streaming=false;am.ts=now();persist();paint();
+    am.streaming=false;if(!am.ts)am.ts=now();
+    paint();loadSessions().then(renderSidebar);
   }catch(e){
     am.streaming=false;
     if(e.name==="AbortError"){am.text=(am.text||"")+"\n\n（已停止）";am.ts=now()}
     else{am.error=true;am.text="请求失败: "+e.message;am.ts=now()}
-    persist();paint();
+    paint();
   }finally{
     generating=false;abortCtl=null;
-    $("send").disabled=false;$("stop").style.display="none";renderSidebar();
+    $("send").disabled=false;$("stop").style.display="none";paint();renderSidebar();
   }
 }
 function stopGen(){if(abortCtl)abortCtl.abort()}
 
-/* ───────── 会话操作 ───────── */
-function newChat(){activeId=null;persist();renderAll();closeSidebar();$("q").focus()}
-function clearSession(){const s=cur();if(!s)return;s.messages=[];s.title="新会话";persist();renderChat()}
+/* ───────── 杂项 ───────── */
+function newChat(){activeId=null;renderAll();closeSidebar();$("q").focus()}
 function toggleSidebar(){$("sidebar").classList.toggle("open");
   $("overlay").style.display=$("sidebar").classList.contains("open")?"block":"none"}
 function closeSidebar(){$("sidebar").classList.remove("open");$("overlay").style.display="none"}
 function autoGrow(){const ta=$("q");ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,140)+"px"}
 
-/* ───────── 初始化 ───────── */
+/* ───────── 启动 ───────── */
 $("chips").innerHTML=CHIPS.map((c,i)=>`<div class="chip" data-c="${i}">${esc(c.t)}<span class="tag">${esc(c.tag)}</span></div>`).join("");
 $("chips").onclick=e=>{const d=e.target.closest(".chip");if(!d)return;$("q").value=CHIPS[+d.dataset.c].t;autoGrow();send()};
 $("newChat").onclick=newChat;
@@ -357,8 +471,12 @@ $("q").addEventListener("input",()=>{
   const q=$("q").value.trim();
   $("intent").innerHTML=q?`将按 <b class="${HINT_RE.test(q)?"sql":""}">${HINT_RE.test(q)?"数据查询":"知识问答"}</b> 处理`:"";
 });
-fetch("/api/health").then(r=>r.json()).then(renderStatus).catch(()=>renderStatus(null));
-renderAll();
+(async function(){
+  if(!(await checkAuth()))return;
+  fetch("/api/health").then(r=>r.json()).then(renderStatus).catch(()=>renderStatus(null));
+  await loadSessions();
+  renderAll();
+})();
 </script>
 </body>
 </html>

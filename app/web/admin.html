@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fab Bot · 管理后台</title>
+<style>
+:root{
+  --sidebar:#141b26; --sidebar2:#1c2635; --accent:#d4875a; --accent-soft:#f6e7dd;
+  --bg:#f4f6f9; --panel:#ffffff; --text:#1d2733; --muted:#6f7a89; --border:#e4e8ee;
+  --ok:#2e9e6b; --err:#c0392b;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+header{background:var(--sidebar);color:#cfd6e0;padding:14px 24px;display:flex;align-items:center;gap:14px}
+header h1{margin:0;font-size:17px;color:#fff}
+header .sp{flex:1}
+header a,header button{color:#a9b4c4;background:none;border:1px solid #3a465a;border-radius:7px;
+  padding:4px 12px;font-size:12.5px;text-decoration:none;cursor:pointer}
+header a:hover,header button:hover{color:#fff}
+.tabs{display:flex;gap:4px;background:var(--panel);border-bottom:1px solid var(--border);padding:0 24px}
+.tab{padding:12px 20px;cursor:pointer;color:var(--muted);font-weight:600;border-bottom:2.5px solid transparent}
+.tab.on{color:#a35a2b;border-bottom-color:var(--accent)}
+.wrap{max-width:1000px;margin:22px auto;padding:0 20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:13px;padding:16px}
+.card .v{font-size:26px;font-weight:700;color:#1d2733}
+.card .k{font-size:12px;color:var(--muted);margin-top:4px}
+table{border-collapse:collapse;width:100%;background:var(--panel);border:1px solid var(--border);border-radius:10px;font-size:13px}
+th{background:#f5f7fa;color:var(--muted);text-align:left;font-weight:600}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+select,input[type=text],input[type=password]{padding:6px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;outline:none}
+.btn{background:var(--accent);border:0;color:#fff;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:13px}
+.btn.gray{background:#eef1f5;color:var(--muted);border:1px solid var(--border)}
+.btn.gray:hover{color:var(--text)}
+.btn.warn{background:#fff;border:1px solid var(--err);color:var(--err)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:11.5px;font-weight:600}
+.pill.admin{background:#1d2a3f;color:#8fb7ff}.pill.user{background:#e8f6ef;color:var(--ok)}.pill.viewer{background:#f1f3f6;color:var(--muted)}
+.pill.ok{background:#e8f6ef;color:var(--ok)}.pill.no{background:#fdecea;color:var(--err)}
+#gate{max-width:360px;margin:14vh auto;background:#fff;border:1px solid var(--border);border-radius:16px;padding:32px}
+#gate h2{margin:0 0 4px}
+#gate .sub{color:var(--muted);font-size:12.5px;margin-bottom:18px}
+#gate input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;margin-bottom:10px}
+#gate button{width:100%;padding:10px;background:var(--accent);border:0;color:#fff;border-radius:9px;font-size:14px;cursor:pointer}
+#gate .err{color:var(--err);font-size:12.5px;min-height:16px}
+pre.res{background:#10161f;color:#d8e2ef;border-radius:9px;padding:12px;font-size:12px;max-height:280px;overflow:auto;white-space:pre-wrap}
+.formrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚙️ Fab Bot 管理后台</h1>
+  <span class="sp"></span>
+  <a href="/">返回对话</a>
+  <button onclick="logout()">退出登录</button>
+</header>
+<div id="gate">
+  <h2>管理员登录</h2>
+  <div class="sub">管理后台仅对 admin 角色开放</div>
+  <div class="err" id="gateErr"></div>
+  <input id="lu" placeholder="用户名">
+  <input id="lp" type="password" placeholder="密码">
+  <button onclick="gateLogin()">登 录</button>
+</div>
+<div id="app" style="display:none">
+  <div class="tabs">
+    <div class="tab on" data-t="stats" onclick="showTab('stats')">统计</div>
+    <div class="tab" data-t="users" onclick="showTab('users')">用户</div>
+    <div class="tab" data-t="audit" onclick="showTab('audit')">审计日志</div>
+    <div class="tab" data-t="kb" onclick="showTab('kb')">知识库</div>
+  </div>
+  <div class="wrap" id="tab-stats"></div>
+  <div class="wrap" id="tab-users" style="display:none"></div>
+  <div class="wrap" id="tab-audit" style="display:none"></div>
+  <div class="wrap" id="tab-kb" style="display:none"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+function esc(s){return (s??"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+let me=null,auditLimit=200,auditUser="";
+
+async function gateLogin(){
+  const r=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:$("lu").value.trim(),password:$("lp").value})});
+  if(!r.ok){$("gateErr").textContent=(await r.json()).detail||"登录失败";return}
+  await check();
+}
+async function logout(){await fetch("/api/auth/logout",{method:"POST"});location.reload()}
+async function check(){
+  const r=await fetch("/api/auth/me");
+  if(!r.ok){$("gate").style.display="block";return}
+  me=(await r.json()).user;
+  if(me.role!=="admin"){$("gateErr").textContent=`当前角色 ${me.role} 无管理权限, 请用 admin 登录`;$("gate").style.display="block";return}
+  $("gate").style.display="none";$("app").style.display="block";
+  loadStats();
+}
+function showTab(t){
+  document.querySelectorAll(".tab").forEach(el=>el.classList.toggle("on",el.dataset.t===t));
+  ["stats","users","audit","kb"].forEach(x=>$("tab-"+x).style.display=x===t?"":"none");
+  if(t==="stats")loadStats();
+  if(t==="users")loadUsers();
+  if(t==="audit")loadAudit();
+  if(t==="kb")renderKb();
+}
+
+/* ── 统计 ── */
+async function loadStats(){
+  const s=await (await fetch("/api/admin/stats")).json();
+  const cards=[
+    ["用户数",s.users],["会话总数",s.chat_sessions],["消息总数",s.messages],["今日消息",s.messages_today],
+    ["👍 好评",s.feedback_up],["👎 差评",s.feedback_down],["今日审计",s.audit_today],["知识库片段",s.kb_chunks],
+  ];
+  $("tab-stats").innerHTML=`
+    <div class="toolbar"><b>系统概况</b><span class="pill ${s.llm&&s.llm.mock?"user":"ok"}">模型: ${s.llm&&s.llm.mock?"Mock 演示":esc(s.llm.model||"真实")}</span>
+      <button class="btn gray" onclick="loadStats()">刷新</button></div>
+    <div class="cards">${cards.map(c=>`<div class="card"><div class="v">${c[1]}</div><div class="k">${c[0]}</div></div>`).join("")}</div>`;
+}
+
+/* ── 用户 ── */
+async function loadUsers(){
+  const users=(await (await fetch("/api/admin/users")).json()).users;
+  const rows=users.map(u=>`<tr>
+    <td>${esc(u.username)}</td><td>${esc(u.display_name||"")}</td>
+    <td><select onchange="setRole('${u.id}',this.value)">
+      ${["admin","user","viewer"].map(r=>`<option ${r===u.role?"selected":""}>${r}</option>`).join("")}
+    </select></td>
+    <td><span class="pill ${u.disabled?"no":"ok"}">${u.disabled?"已禁用":"正常"}</span></td>
+    <td>${esc(u.created_at||"")}</td>
+    <td>
+      <button class="btn gray" onclick="toggleUser('${u.id}',${u.disabled?1:0})">${u.disabled?"启用":"禁用"}</button>
+      <button class="btn gray" onclick="resetPw('${u.id}','${esc(u.username)}')">重置密码</button>
+    </td></tr>`).join("");
+  $("tab-users").innerHTML=`
+    <div class="toolbar"><b>新增用户</b></div>
+    <div class="formrow">
+      <input type="text" id="nu" placeholder="用户名">
+      <input type="password" id="np" placeholder="密码(≥6位)">
+      <select id="nr"><option value="user">user</option><option value="viewer">viewer</option><option value="admin">admin</option></select>
+      <input type="text" id="nd" placeholder="姓名(可选)">
+      <button class="btn" onclick="addUser()">创建</button>
+    </div>
+    <table><tr><th>用户名</th><th>姓名</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr>${rows}</table>`;
+}
+async function addUser(){
+  const r=await fetch("/api/admin/users",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:$("nu").value.trim(),password:$("np").value,role:$("nr").value,display_name:$("nd").value.trim()})});
+  if(!r.ok){alert((await r.json()).detail||"创建失败");return}
+  loadUsers();
+}
+async function setRole(id,role){
+  const r=await fetch(`/api/admin/users/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({role})});
+  if(!r.ok){alert((await r.json()).detail||"修改失败")}
+  loadUsers();
+}
+async function toggleUser(id,disabled){
+  const r=await fetch(`/api/admin/users/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({disabled:!disabled})});
+  if(!r.ok){alert((await r.json()).detail||"操作失败")}
+  loadUsers();
+}
+async function resetPw(id,name){
+  const pw=prompt(`为 ${name} 设置新密码 (≥6位):`);
+  if(!pw)return;
+  const r=await fetch(`/api/admin/users/${id}/password`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw})});
+  if(!r.ok){alert((await r.json()).detail||"重置失败");return}
+  alert("密码已重置, 该用户所有登录已失效");
+}
+
+/* ── 审计 ── */
+async function loadAudit(){
+  const qs=new URLSearchParams({limit:auditLimit});
+  if(auditUser)qs.set("user",auditUser);
+  const rows=(await (await fetch("/api/admin/audit?"+qs)).json()).audit;
+  const tr=rows.map(a=>`<tr>
+    <td>${esc(a.ts)}</td><td>${esc(a.user)}</td><td>${esc(a.api)}</td>
+    <td><span class="pill ${a.status==="ok"?"ok":"no"}">${esc(a.status)}</span></td>
+    <td>${esc(a.intent||"-")}</td>
+    <td style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(a.question)}">${esc(a.question)}</td>
+    <td>${a.ms}ms</td></tr>`).join("");
+  $("tab-audit").innerHTML=`
+    <div class="toolbar"><b>问答与操作审计 (最新 ${rows.length} 条)</b>
+      <select onchange="auditLimit=+this.value;loadAudit()">
+        ${[50,200,500].map(n=>`<option ${n===auditLimit?"selected":""}>${n}</option>`).join("")}
+      </select>
+      <input type="text" placeholder="按用户过滤" value="${esc(auditUser)}"
+        onchange="auditUser=this.value.trim();loadAudit()">
+      <button class="btn gray" onclick="loadAudit()">刷新</button></div>
+    <table><tr><th>时间</th><th>用户</th><th>接口</th><th>状态</th><th>意图</th><th>问题</th><th>耗时</th></tr>${tr}</table>`;
+}
+
+/* ── 知识库 ── */
+function renderKb(){
+  $("tab-kb").innerHTML=`
+    <div class="toolbar"><b>知识库运维</b><span class="pill ok" id="kbCount">片段数: –</span>
+      <button class="btn gray" onclick="loadKbCount()">刷新</button></div>
+    <div class="toolbar">
+      <button class="btn" onclick="doIngest()">导入常规文档 (data/knowledge)</button>
+      <button class="btn" onclick="doNotes()">导入 Notes 导出 (export 模式)</button>
+      <button class="btn warn" onclick="doRebuild()">全量重建 (清空向量库重新导入)</button>
+    </div>
+    <div class="thin" style="margin-bottom:10px;color:var(--muted);font-size:12.5px">
+      重建 = 清空向量库 → 重新导入常规文档目录 + Notes 导出目录 (如存在)。适合文档批量更新后执行。</div>
+    <pre class="res" id="kbRes">操作结果将显示在这里…</pre>`;
+  loadKbCount();
+}
+async function loadKbCount(){
+  const h=await (await fetch("/api/health")).json();
+  $("kbCount").textContent=`片段数: ${h.kb_chunks}`;
+}
+async function _post(url, body){
+  $("kbRes").textContent="处理中…";
+  const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:body?JSON.stringify(body):null});
+  const j=await r.json();
+  $("kbRes").textContent=JSON.stringify(j,null,2);
+  loadKbCount();
+}
+const doIngest=()=>_post("/api/kb/ingest");
+const doNotes=()=>_post("/api/kb/ingest_notes",{mode:"export"});
+const doRebuild=()=>{if(confirm("确认全量重建知识库?"))_post("/api/admin/kb/rebuild")};
+
+check();
+</script>
+</body>
+</html>
