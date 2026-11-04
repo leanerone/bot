@@ -62,3 +62,7 @@ notes:
     view: "($All)"
     username: ""                      # 只读服务账号, 由 Domino 管理员开通并审计
     password: ""
+
+# 限流 (v4.0): 每用户每分钟问答次数; 0 = 不限 (多实例部署时换 Redis 实现)
+ratelimit:
+  chat_per_minute: 30

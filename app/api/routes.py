@@ -17,6 +17,7 @@ from app.adapters.hcl_notes import ingest_notes_domino, ingest_notes_export
 from app.api import audit as audit_mod
 from app.api.deps import require_role, require_user
 from app.api.intent import classify
+from app.api.limits import check_rate
 from app.config import abs_path, cfg
 from app.llm.client import LLMError
 from app.rag import pipeline
@@ -83,6 +84,7 @@ def _persist_answer(session_id: str, result: dict) -> int:
 @router.post("/chat")
 def chat(body: AskIn, request: Request):
     user = require_user(request)
+    check_rate(user["id"])
     q = body.question.strip()
     if not q:
         raise HTTPException(400, "问题不能为空")
@@ -167,6 +169,7 @@ def chat_stream(body: AskIn, request: Request):
 @router.post("/kb/ask")
 def kb_ask(body: AskIn, request: Request):
     user = require_user(request)
+    check_rate(user["id"])
     if body.session_id:
         session = _resolve_session(user, body.session_id, body.question.strip())
         result = {"type": "kb", **pipeline.ask(body.question.strip(), history=body.history)}
@@ -178,6 +181,7 @@ def kb_ask(body: AskIn, request: Request):
 @router.post("/data/query")
 def data_query(body: AskIn, request: Request):
     user = require_user(request)
+    check_rate(user["id"])
     try:
         result = {"type": "sql", **text2sql.query(body.question.strip(), history=body.history)}
     except SQLRejected as exc:
