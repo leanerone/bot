@@ -101,6 +101,27 @@ def audit_list(request: Request, limit: int = 200, user: Optional[str] = None):
     return {"audit": db.list_audit(min(max(limit, 1), 1000), user=user)}
 
 
+@router.get("/audit/export")
+def audit_export(request: Request, limit: int = 1000):
+    """审计导出 CSV (带 BOM, Excel 直接打开不乱码)。"""
+    import csv
+    import io
+
+    require_role(request, "admin")
+    rows = db.list_audit(min(max(limit, 1), 5000))
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["ts", "user", "api", "intent", "question", "ms", "status"])
+    for r in rows:
+        writer.writerow([r["ts"], r["user"], r["api"], r["intent"], r["question"], r["ms"], r["status"]])
+    from fastapi.responses import Response
+    return Response(
+        content=b"\xef\xbb\xbf" + buf.getvalue().encode("utf-8"),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=fabbot-audit.csv"},
+    )
+
+
 @router.get("/stats")
 def stats(request: Request):
     require_role(request, "admin")

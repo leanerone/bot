@@ -186,7 +186,8 @@ async function loadAudit(){
       </select>
       <input type="text" placeholder="按用户过滤" value="${esc(auditUser)}"
         onchange="auditUser=this.value.trim();loadAudit()">
-      <button class="btn gray" onclick="loadAudit()">刷新</button></div>
+      <button class="btn gray" onclick="loadAudit()">刷新</button>
+      <a class="btn gray" href="/api/admin/audit/export?limit=5000" download>导出CSV</button></div>
     <table><tr><th>时间</th><th>用户</th><th>接口</th><th>状态</th><th>意图</th><th>问题</th><th>耗时</th></tr>${tr}</table>`;
 }
 

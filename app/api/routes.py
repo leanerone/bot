@@ -212,11 +212,14 @@ def create_session(body: SessionIn, request: Request):
 
 
 @router.get("/sessions/{session_id}/messages")
-def session_messages(session_id: str, request: Request):
+def session_messages(session_id: str, request: Request, limit: int = 50,
+                     before_id: Optional[int] = None):
+    """分页取消息: 默认最近 50 条; 更早消息用 before_id (最早一条的 id) 翻页。"""
     user = require_user(request)
     if not db.get_chat_session(session_id, user_id=user["id"]):
         raise HTTPException(404, "会话不存在或无权访问")
-    return {"messages": db.list_messages(session_id)}
+    limit = min(max(limit, 1), 200)
+    return db.list_messages(session_id, limit=limit, before_id=before_id)
 
 
 @router.patch("/sessions/{session_id}")

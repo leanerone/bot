@@ -346,13 +346,25 @@ def add_message(session_id: str, role: str, type_: str, content: str, *,
         return cur.lastrowid
 
 
-def list_messages(session_id: str) -> List[Dict[str, Any]]:
+def list_messages(session_id: str, limit: int = 50,
+                  before_id: Optional[int] = None) -> Dict[str, Any]:
+    """分页取消息 (按 id 升序返回); before_id 为"加载更早"游标。
+
+    返回 {"messages": [...], "has_more": bool} —— has_more 表示更早还有消息。
+    """
     conn = get_conn()
+    args: List[Any] = [session_id]
+    where = "WHERE session_id = ?"
+    if before_id:
+        where += " AND id < ?"
+        args.append(before_id)
     rows = conn.execute(
-        "SELECT * FROM messages WHERE session_id = ? ORDER BY id", (session_id,)
+        f"SELECT * FROM messages {where} ORDER BY id DESC LIMIT ?", (*args, limit + 1)
     ).fetchall()
+    has_more = len(rows) > limit
+    rows = rows[:limit]
     out = []
-    for r in rows:
+    for r in reversed(rows):  # 升序输出
         d = dict(r)
         for key in ("sources", "columns", "rows"):
             if d.get(key):
@@ -361,7 +373,7 @@ def list_messages(session_id: str) -> List[Dict[str, Any]]:
                 except json.JSONDecodeError:
                     pass
         out.append(d)
-    return out
+    return {"messages": out, "has_more": has_more}
 
 
 def rate_message(message_id: int, rating: str) -> bool:

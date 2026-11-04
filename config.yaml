@@ -47,6 +47,7 @@ store:
 # 认证与角色 (v4.0): viewer < user < admin
 auth:
   token_ttl_hours: 24                 # 登录令牌有效期
+  cookie_secure: false                # HTTPS 部署 (nginx 反代) 时改为 true
   bootstrap_users:                    # 首次启动自动创建; 上线后立即改默认密码!
     - {username: admin,   password: admin123, role: admin,  display_name: 管理员}
     - {username: zhangsan, password: user123, role: user,   display_name: 张工}

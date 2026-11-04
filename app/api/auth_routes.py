@@ -27,7 +27,8 @@ def login(body: LoginIn, response: Response):
     token, _ = db.issue_token(user["id"], ttl)
     resp = JSONResponse({"ok": True, "user": public_user(user)})
     resp.set_cookie(COOKIE_NAME, token, httponly=True, samesite="lax",
-                    path="/", max_age=int(ttl * 3600))
+                    path="/", max_age=int(ttl * 3600),
+                    secure=bool(cfg("auth.cookie_secure", False)))  # HTTPS 部署时置 true
     db.log_audit(user["username"], "/api/auth/login", "", "", 0)
     return resp
 
