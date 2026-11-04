@@ -84,6 +84,7 @@ def ingest_dir(kb_dir: str, store: Optional[LocalVectorStore] = None) -> Dict:
     used: List[str] = []
     errors: List[str] = []
     total = 0
+    added = 0
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
@@ -96,7 +97,7 @@ def ingest_dir(kb_dir: str, store: Optional[LocalVectorStore] = None) -> Dict:
         if not chunks:
             continue
         rel = str(path.relative_to(root))
-        store.add(embedder.embed(chunks), [{"source": rel, "text": c} for c in chunks])
+        added += store.add(embedder.embed(chunks), [{"source": rel, "text": c} for c in chunks])
         total += len(chunks)
         used.append(rel)
-    return {"files": used, "chunks": total, "errors": errors}
+    return {"files": used, "chunks": total, "added": added, "errors": errors}
