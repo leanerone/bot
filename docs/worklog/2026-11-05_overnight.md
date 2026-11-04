@@ -170,3 +170,8 @@
 - 文档引用的接口 (chat/stream, kb/ingest_notes, notify/test, audit/export...) 与实际路由全部对上
 - deploy/ 四个交付文件存在性确认
 - 进入守夜循环: 每 20 分钟 check_all 门禁, 06:00 终验
+
+### 守夜循环 GATE1 (02:18)
+- 门禁抓到 scripts/pre_acceptance.py 3 处 lint (F401/F841) -> 已清零 -> 全门禁 exit=0
+- (教训印证: 夜间门禁正是在无人监督时兜底)
+- GATE2 (02:39): 全绿 exit=0 (lint/pytest/评测/前端语法)
