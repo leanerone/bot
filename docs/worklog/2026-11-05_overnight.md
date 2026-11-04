@@ -135,3 +135,10 @@
 ### P23 浏览器回归 (01:44 完成)
 - admin 新增"会话管理"页签 (含删除); 修复 showTab 显示列表遗漏新页签
 - 截图确认: 全用户会话表格正常渲染 (并发冒烟真实数据可见)
+
+### P24 分页端到端修复 (01:48 完成)
+- 关键修复: 前端消息映射 user 分支缺 id 字段 -> oldestId 永远 undefined -> "加载更早"失效
+- 新增调试桥 window.__fab (sessions/open/loadEarlier/state/me) —— IAB evaluate 跑在隔离世界,
+  无法直接读页面 let 绑定; 桥是验证页面真实状态的可靠通道 (后续前端调试统一走桥)
+- 端到端: 60 条消息会话, 打开显示最近 50 + 加载更早 -> 60 条/hasMore=false/DOM 60 节点
+- 教训: heredoc 打补丁不可靠 (转义/静默失败), 前端改动一律 Edit 工具 + node --check + 桥验证

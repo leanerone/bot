@@ -239,17 +239,29 @@ function mdToHtml(src){
     blocks.push(`<pre class="code"><code>${esc(c.trimEnd())}</code></pre>`);return `\u0000${blocks.length-1}\u0000`});
   let h=esc(src).replace(/`([^`\n]+)`/g,'<span class="inline-code">$1</span>')
                 .replace(/\*\*([^*\n]+)\*\*/g,"<strong>$1</strong>");
-  const lines=h.split("\n");let out="",ul=false,para=[];
+  const lines=h.split("\n");let out="",ul=false,para=[],tbl=[];
   const flush=()=>{if(para.length){out+="<p>"+para.join("<br>")+"</p>";para=[]}};
+  const flushTbl=()=>{if(tbl.length){
+    const rows=tbl.map(r=>r.replace(/^\||\|$/g,"").split("|").map(c=>c.trim()));
+    const isSep=r=>r.every(c=>/^:?-{2,}:?$/.test(c));
+    const head=rows[0];
+    let h='<table class="rt"><tr>'+head.map(c=>`<th>${c}</th>`).join("")+"</tr>";
+    rows.slice(1).forEach(r=>{
+      if(isSep(r))return;
+      h+="<tr>"+r.map(c=>`<td>${c}</td>`).join("")+"</tr>";
+    });
+    h+="</table>";out+=h;tbl=[]}};
   for(const ln of lines){
     const t=ln.trim();
-    if(/^\u0000\d+\u0000$/.test(t)){flush();if(ul){out+="</ul>";ul=false}out+=blocks[+t.slice(1,-1)];continue}
+    if(/^\u0000\d+\u0000$/.test(t)){flush();flushTbl();if(ul){out+="</ul>";ul=false}out+=blocks[+t.slice(1,-1)];continue}
+    if(/^\|.*\|$/.test(t)){flush();if(ul){out+="</ul>";ul=false}tbl.push(t);continue}
+    if(tbl.length)flushTbl();
     if(/^- /.test(ln)){flush();if(!ul){out+="<ul>";ul=true}out+=`<li>${ln.slice(2)}</li>`;continue}
     if(/^#{1,4} /.test(t)){flush();if(ul){out+="</ul>";ul=false}out+=`<div style="font-weight:700;margin:10px 0 4px">${t.replace(/^#+ /,"")}</div>`;continue}
     if(t===""){flush();if(ul){out+="</ul>";ul=false}continue}
     para.push(ln);
   }
-  flush();if(ul)out+="</ul>";
+  flush();flushTbl();if(ul)out+="</ul>";
   return out||"<p></p>";
 }
 function copyText(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{
