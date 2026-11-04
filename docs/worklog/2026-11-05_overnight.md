@@ -175,3 +175,4 @@
 - 门禁抓到 scripts/pre_acceptance.py 3 处 lint (F401/F841) -> 已清零 -> 全门禁 exit=0
 - (教训印证: 夜间门禁正是在无人监督时兜底)
 - GATE2 (02:39): 全绿 exit=0 (lint/pytest/评测/前端语法)
+- GATE3 (02:59): 全绿 exit=0 —— 转入批量自动巡检 (GATE4~11, 每20分钟, 红灯即停唤醒修复)
