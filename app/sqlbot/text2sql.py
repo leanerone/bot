@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Tuple
 
 from app.config import abs_path, cfg
 from app.llm.client import get_llm
-from app.llm.prompts import T2SQL_SYSTEM
+from app.llm.prompts import T2SQL_SYSTEM, clean_history
 from app.sqlbot.schema import FEWSHOT, SCHEMA_TEXT
 from app.sqlbot.validator import validate_sql
 
@@ -39,15 +39,13 @@ def execute_sql(sql: str) -> Tuple[List[str], List[List[Any]]]:
     return columns, rows
 
 
-def query(question: str) -> Dict[str, Any]:
+def query(question: str, history=None) -> Dict[str, Any]:
     max_rows = int(cfg("sqlbot.max_rows", 200))
     prompt = T2SQL_SYSTEM.format(schema=SCHEMA_TEXT, fewshot=FEWSHOT, max_rows=max_rows)
-    raw = get_llm().chat(
-        [
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": question},
-        ]
-    )
+    messages = [{"role": "system", "content": prompt}]
+    messages.extend(clean_history(history, max_turns=4))
+    messages.append({"role": "user", "content": question})
+    raw = get_llm().chat(messages)
     sql = validate_sql(raw, max_rows=max_rows)
     columns, rows = execute_sql(sql)
     return {"sql": sql, "columns": columns, "rows": rows, "row_count": len(rows)}

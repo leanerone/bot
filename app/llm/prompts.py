@@ -27,3 +27,14 @@ T2SQL_SYSTEM = """你是 SQL 生成器。将用户的自然语言问题转换为
 
 示例:
 {fewshot}"""
+
+
+def clean_history(history, max_turns: int = 6, max_len: int = 800) -> list:
+    """整理对话历史: 只保留 user/assistant, 截断长度, 取最近 N 条, 便于追问。"""
+    out = []
+    for m in history or []:
+        role = m.get("role")
+        content = str(m.get("content") or "").strip()
+        if role in ("user", "assistant") and content:
+            out.append({"role": role, "content": content[:max_len]})
+    return out[-max_turns:]

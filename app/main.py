@@ -1,7 +1,7 @@
 """Fab Bot 应用入口。
 
 启动: uvicorn app.main:app --port 8100 --reload
-页面: http://127.0.0.1:8100
+页面: http://127.0.0.1:8100 (登录页) · /admin 管理后台
 """
 from __future__ import annotations
 
@@ -12,13 +12,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from app.adapters.mock_mes import DEMO_DB, seed_demo_db
+from app.api import admin as admin_api
+from app.api import auth_routes
 from app.api.routes import router
 from app.config import ROOT, abs_path, cfg
 from app.rag.ingest import get_store, ingest_dir
+from app.store import db
 
 
 def _bootstrap() -> None:
-    """演示引导: 自动建演示库; 知识库为空且有文档时自动导入。"""
+    """启动引导: 初始化数据库(含内置账号) -> 演示库 -> 知识库为空时自动导入。"""
+    db.get_conn()  # 建表 + 首次种子账号
     seed_demo_db(DEMO_DB)
     store = get_store()
     kb_dir = abs_path(cfg("rag.knowledge_path", "data/knowledge"))
@@ -37,15 +41,21 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Fab Bot", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Fab Bot", version="4.0.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
     )
+    app.include_router(auth_routes.router)
     app.include_router(router)
+    app.include_router(admin_api.router)
 
     @app.get("/")
     def index():
         return FileResponse(str(ROOT / "app" / "web" / "index.html"))
+
+    @app.get("/admin")
+    def admin_page():
+        return FileResponse(str(ROOT / "app" / "web" / "admin.html"))
 
     return app
 

@@ -23,6 +23,12 @@ def get_store() -> LocalVectorStore:
     return _store
 
 
+def reset_store() -> None:
+    """丢弃内存单例 (重建知识库前调用, 目录由调用方清理)。"""
+    global _store
+    _store = None
+
+
 def read_document(path: Path) -> str:
     suffix = path.suffix.lower()
     if suffix in (".md", ".txt"):

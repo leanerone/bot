@@ -2,64 +2,363 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fab Bot · 半导体工厂智能助手</title>
 <style>
-  body{font-family:"Microsoft YaHei",system-ui,sans-serif;background:#0f141a;color:#e6e6e6;margin:0;display:flex;justify-content:center}
-  .app{width:min(860px,100%);display:flex;flex-direction:column;height:100vh}
-  header{padding:14px 18px;border-bottom:1px solid #232b36;font-weight:600}
-  header small{color:#8b98a5;font-weight:400;margin-left:8px}
-  #chat{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
-  .msg{max-width:88%;padding:10px 14px;border-radius:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
-  .user{align-self:flex-end;background:#2563eb;border-radius:12px 12px 2px 12px}
-  .bot{align-self:flex-start;background:#1a222d;border:1px solid #2a3542;border-radius:12px 12px 12px 2px}
-  .meta{margin-top:8px;font-size:12px;color:#8b98a5}
-  .meta code{color:#9ecbff}
-  table{border-collapse:collapse;margin-top:8px;font-size:13px}
-  td,th{border:1px solid #2a3542;padding:4px 10px;text-align:left}
-  footer{display:flex;gap:10px;padding:14px 18px;border-top:1px solid #232b36}
-  input{flex:1;background:#1a222d;border:1px solid #2a3542;color:#e6e6e6;border-radius:8px;padding:10px 12px;font-size:14px}
-  button{background:#2563eb;border:0;color:#fff;border-radius:8px;padding:10px 18px;cursor:pointer}
-  .hint{padding:0 18px 10px;color:#8b98a5;font-size:12px}
+:root{
+  --sidebar:#141b26; --sidebar2:#1c2635; --accent:#d4875a; --accent-soft:#f6e7dd;
+  --bg:#f4f6f9; --panel:#ffffff; --text:#1d2733; --muted:#6f7a89; --border:#e4e8ee;
+  --user:#2f6bdb; --ok:#2e9e6b; --warn:#c98a1d; --err:#c0392b;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+#app{display:flex;height:100vh}
+
+/* ── 侧栏 ── */
+#sidebar{width:264px;background:var(--sidebar);color:#cfd6e0;display:flex;flex-direction:column;flex-shrink:0}
+.brand{padding:18px 18px 14px;border-bottom:1px solid #232d3c}
+.brand h1{margin:0;font-size:17px;color:#fff;font-weight:600;letter-spacing:.5px}
+.brand small{color:#7d8a9c;font-size:12px}
+#newChat{margin:14px 14px 8px;padding:10px;border:1px dashed #3a465a;background:var(--sidebar2);color:#e8edf4;
+  border-radius:10px;cursor:pointer;font-size:13.5px;width:calc(100% - 28px)}
+#newChat:hover{border-color:var(--accent);color:#fff}
+#sessions{flex:1;overflow-y:auto;padding:6px 10px}
+.sess{padding:9px 10px;border-radius:9px;cursor:pointer;display:flex;justify-content:space-between;gap:6px;align-items:center;margin-bottom:2px}
+.sess:hover{background:#202b3c}
+.sess.active{background:var(--sidebar2);box-shadow:inset 2.5px 0 0 var(--accent)}
+.sess .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.sess .d{font-size:11px;color:#69768a}
+.sess .x{color:#5d6a7e;font-size:14px;padding:0 3px;border-radius:5px}
+.sess .x:hover{color:#ff8a80;background:#2a3548}
+.status{margin:10px 14px 14px;padding:12px;background:var(--sidebar2);border-radius:11px;font-size:12.5px;line-height:1.9}
+.status .row{display:flex;justify-content:space-between;gap:8px}
+.status .k{color:#7d8a9c}
+.badge{padding:1px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.mock{background:#3a2f14;color:#f5c451}
+.badge.real{background:#153427;color:#5fdba3}
+.badge.plain{background:#232d3c;color:#a9b4c4}
+.links{padding:0 14px 16px;font-size:12px}
+.links a{color:#6d7d94;text-decoration:none;margin-right:12px}
+.links a:hover{color:#9fb3cc}
+
+/* ── 主区 ── */
+main{flex:1;display:flex;flex-direction:column;min-width:0}
+#topbar{height:54px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;
+  gap:10px;padding:0 18px}
+#topbar .title{font-weight:600;font-size:14.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbtn{border:1px solid var(--border);background:#fff;color:var(--muted);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:12.5px}
+.tbtn:hover{color:var(--text);border-color:#c9d1db}
+#hamb{display:none;font-size:17px;border:none;background:none;cursor:pointer;color:var(--text)}
+
+#chat{flex:1;overflow-y:auto;padding:26px 0 10px;scroll-behavior:smooth}
+.col{max-width:860px;margin:0 auto;padding:0 26px}
+
+/* 空态 */
+#empty{max-width:720px;margin:5vh auto 0;padding:0 26px;text-align:center}
+#empty .logo{font-size:44px}
+#empty h2{margin:10px 0 6px;font-size:21px}
+#empty p{color:var(--muted);margin:0 0 26px}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left}
+.chip{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 16px;cursor:pointer;font-size:13.5px;transition:.15s}
+.chip:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(212,135,90,.15)}
+.chip .tag{display:block;font-size:11px;color:var(--muted);margin-top:5px}
+
+/* 消息 */
+.msg{margin-bottom:20px}
+.msg.user{display:flex;justify-content:flex-end}
+.msg.user .bubble{background:var(--user);color:#fff;max-width:72%;padding:10px 15px;border-radius:14px 14px 3px 14px;
+  white-space:pre-wrap;word-break:break-word;line-height:1.65}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:13px;padding:14px 17px;line-height:1.7;
+  box-shadow:0 1px 3px rgba(20,30,50,.05)}
+.card.error{border-color:#ecc8c3;background:#fdf5f4}
+.meta{margin-top:9px;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.itag{background:var(--accent-soft);color:#a35a2b;padding:1px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.itag.sql{background:#e3ecfb;color:#2a56a8}
+.meta .cp{border:none;background:none;color:#98a3b3;cursor:pointer;font-size:12px;padding:2px 4px}
+.meta .cp:hover{color:var(--text)}
+.cursor{display:inline-block;width:9px;height:16px;background:var(--accent);vertical-align:-2px;animation:blink 1s step-end infinite;border-radius:2px}
+@keyframes blink{50%{opacity:0}}
+.sources{margin-top:10px;border-top:1px dashed var(--border);padding-top:9px}
+.src{display:inline-flex;gap:5px;background:#f5f7fa;border:1px solid var(--border);border-radius:8px;
+  padding:3px 9px;font-size:11.5px;color:var(--muted);margin:2px 6px 2px 0;max-width:100%}
+.src b{color:#a35a2b;font-weight:600}
+pre.code{background:#10161f;color:#d8e2ef;border-radius:9px;padding:11px 13px;overflow-x:auto;
+  font-family:Consolas,Menlo,monospace;font-size:12.5px;margin:8px 0}
+.inline-code{background:#f1f3f6;border:1px solid var(--border);border-radius:4px;padding:0 5px;font-family:Consolas,monospace;font-size:12.5px;color:#a35a2b}
+table.rt{border-collapse:collapse;margin-top:10px;font-size:12.8px;width:100%;background:#fff}
+table.rt th{background:var(--accent);color:#fff;font-weight:600;text-align:left}
+table.rt th,table.rt td{border:1px solid var(--border);padding:5px 11px}
+table.rt tr:nth-child(even) td{background:#faf6f3}
+.card .md p{margin:0 0 8px}
+.card .md p:last-child{margin-bottom:0}
+.card .md ul{margin:4px 0 8px;padding-left:20px}
+.card .md h3,.card .md h4{margin:10px 0 6px;font-size:14.5px}
+.thin{color:var(--muted);font-size:12px;margin-top:6px}
+
+/* 输入区 */
+#composer{padding:10px 0 18px;background:linear-gradient(transparent,var(--bg) 30%)}
+.cbox{max-width:860px;margin:0 auto;padding:0 26px}
+.wrap{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:11px 13px;box-shadow:0 2px 14px rgba(20,30,50,.07)}
+.wrap:focus-within{border-color:var(--accent)}
+#q{width:100%;border:none;outline:none;resize:none;font:inherit;line-height:1.6;max-height:140px;background:none;color:var(--text)}
+.brow{display:flex;align-items:center;gap:9px;margin-top:7px}
+#intent{font-size:11.5px;color:var(--muted)}
+#intent b{color:#a35a2b;font-weight:600}
+#intent b.sql{color:#2a56a8}
+#send{margin-left:auto;background:var(--accent);border:none;color:#fff;border-radius:9px;padding:8px 20px;
+  cursor:pointer;font-size:13.5px;font-weight:600}
+#send:hover{background:#c3764b}
+#send:disabled{background:#d9c4b6;cursor:not-allowed}
+#stop{display:none;background:#fff;border:1px solid var(--border);color:var(--err);border-radius:9px;padding:8px 14px;cursor:pointer;font-size:13px}
+.hintbar{text-align:center;color:#9aa5b3;font-size:11.5px;margin-top:8px}
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9}
+@media(max-width:900px){
+  #sidebar{position:fixed;z-index:10;height:100vh;left:-280px;transition:left .2s}
+  #sidebar.open{left:0}
+  #hamb{display:block}
+  .chips{grid-template-columns:1fr}
+}
+::-webkit-scrollbar{width:9px}
+::-webkit-scrollbar-thumb{background:#c6cdd8;border-radius:8px}
+#sessions::-webkit-scrollbar-thumb{background:#2c3850}
 </style>
 </head>
 <body>
-<div class="app">
-  <header>⚙️ Fab Bot <small>知识问答 · 数据查询</small></header>
-  <div id="chat"></div>
-  <div class="hint">试试: 「最近的未处理告警有哪些？」 「ETCH 区几台机台是 DOWN 的？」 「射频功率漂移怎么处理？」</div>
-  <footer>
-    <input id="q" placeholder="输入问题, 回车发送…" onkeydown="if(event.key==='Enter')send()">
-    <button onclick="send()">发送</button>
-  </footer>
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand"><h1>⚙️ Fab Bot</h1><small>半导体工厂智能助手</small></div>
+    <button id="newChat">＋ 新会话</button>
+    <div id="sessions"></div>
+    <div class="status">
+      <div class="row"><span class="k">模型服务</span><span id="llmBadge"><span class="badge mock">检测中</span></span></div>
+      <div class="row"><span class="k">知识库</span><span id="kbStat">–</span></div>
+      <div class="row"><span class="k">Notes 接入</span><span id="notesStat" class="badge plain">–</span></div>
+    </div>
+    <div class="links"><a href="/docs" target="_blank">API 文档</a><a href="https://github.com/leanerone/bot" target="_blank">源码</a></div>
+  </aside>
+  <main>
+    <div id="topbar">
+      <button id="hamb" onclick="toggleSidebar()">☰</button>
+      <div class="title" id="title">新会话</div>
+      <button class="tbtn" onclick="clearSession()">清空</button>
+    </div>
+    <div id="chat"><div id="empty">
+      <div class="logo">⚙️</div>
+      <h2>Fab Bot</h2>
+      <p>知识问答 · 数据查询 —— 答案可溯源，查询只读安全</p>
+      <div class="chips" id="chips"></div>
+    </div></div>
+    <div id="composer"><div class="cbox"><div class="wrap">
+      <textarea id="q" rows="1" placeholder="输入问题…（Enter 发送 / Shift+Enter 换行）"></textarea>
+      <div class="brow">
+        <span id="intent"></span>
+        <button id="stop" onclick="stopGen()">■ 停止</button>
+        <button id="send" onclick="send()">发送</button>
+      </div>
+    </div><div class="hintbar">回答均基于知识库并附引用来源 · 数据查询仅支持只读 SELECT</div></div></div>
+  </main>
 </div>
+<div id="overlay" onclick="toggleSidebar()"></div>
 <script>
-const chat = document.getElementById('chat');
-function add(cls, html){const d=document.createElement('div');d.className='msg '+cls;d.innerHTML=html;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;}
-function esc(s){return (s??'').toString().replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
-function renderTable(cols, rows){
-  let h='<table><tr>'+cols.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr>';
-  for(const r of rows.slice(0,50)) h+='<tr>'+r.map(v=>`<td>${esc(v)}</td>`).join('')+'</tr>';
-  return h+'</table>'+(rows.length>50?`<div class="meta">(仅显示前 50 / 共 ${rows.length} 行)</div>`:'');
+/* ───────── 状态与持久化 ───────── */
+const CHIPS=[
+  {t:"射频功率漂移怎么处理？",tag:"知识问答 · SOP 检索"},
+  {t:"交班时最容易被漏掉的信息有哪些？",tag:"知识问答 · 经验库"},
+  {t:"最近未处理的告警有哪些？",tag:"数据查询 · 只读"},
+  {t:"ETCH 区现在有几台机台是 DOWN 的？",tag:"数据查询 · 只读"},
+];
+const HINT_RE=/多少|几个|统计|查询|查一下|排名|top|趋势|良率|wip|在制|机台|告警|报警|数量|平均|最近/i;
+let sessions=[],activeId=null,abortCtl=null,generating=false;
+try{sessions=JSON.parse(localStorage.getItem("fabbot.sessions")||"[]")}catch(e){sessions=[]}
+activeId=localStorage.getItem("fabbot.active")||null;
+function persist(){localStorage.setItem("fabbot.sessions",JSON.stringify(sessions));
+  if(activeId)localStorage.setItem("fabbot.active",activeId);else localStorage.removeItem("fabbot.active")}
+function cur(){return sessions.find(s=>s.id===activeId)}
+
+/* ───────── 工具 ───────── */
+const $=id=>document.getElementById(id);
+function esc(s){return (s??"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function now(){const d=new Date();return d.toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"})}
+function fmtDay(ts){const d=new Date(ts),n=new Date();const same=d.toDateString()===n.toDateString();
+  return same?d.toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}):
+  d.toLocaleDateString("zh-CN",{month:"numeric",day:"numeric"})}
+function mdToHtml(src){
+  const blocks=[];
+  src=(src||"").replace(/```(\w*)\n?([\s\S]*?)```/g,(m,l,c)=>{
+    blocks.push(`<pre class="code"><code>${esc(c.trimEnd())}</code></pre>`);return `\u0000${blocks.length-1}\u0000`});
+  let h=esc(src).replace(/`([^`\n]+)`/g,'<span class="inline-code">$1</span>')
+                .replace(/\*\*([^*\n]+)\*\*/g,"<strong>$1</strong>");
+  const lines=h.split("\n");let out="",ul=false,para=[];
+  const flush=()=>{if(para.length){out+="<p>"+para.join("<br>")+"</p>";para=[]}};
+  for(const ln of lines){
+    const t=ln.trim();
+    if(/^\u0000\d+\u0000$/.test(t)){flush();if(ul){out+="</ul>";ul=false}out+=blocks[+t.slice(1,-1)];continue}
+    if(/^- /.test(ln)){flush();if(!ul){out+="<ul>";ul=true}out+=`<li>${ln.slice(2)}</li>`;continue}
+    if(/^#{1,4} /.test(t)){flush();if(ul){out+="</ul>";ul=false}out+=`<div class="mh" style="font-weight:700;margin:10px 0 4px">${t.replace(/^#+ /,"")}</div>`;continue}
+    if(t===""){flush();if(ul){out+="</ul>";ul=false}continue}
+    para.push(ln);
+  }
+  flush();if(ul)out+="</ul>";
+  return out||"<p></p>";
+}
+function copyText(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{
+  const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();
+  document.execCommand("copy");ta.remove()})}
+
+/* ───────── 渲染 ───────── */
+function renderSidebar(){
+  const box=$("sessions");box.innerHTML="";
+  sessions.forEach(s=>{
+    const d=document.createElement("div");
+    d.className="sess"+(s.id===activeId?" active":"");
+    d.innerHTML=`<span class="t">${esc(s.title)}</span><span class="d">${esc(fmtDay(s.ts))}</span><span class="x" title="删除">×</span>`;
+    d.onclick=e=>{
+      if(e.target.classList.contains("x")){sessions=sessions.filter(x=>x.id!==s.id);
+        if(activeId===s.id)activeId=sessions[0]?sessions[0].id:null;persist();renderAll();return}
+      activeId=s.id;persist();renderAll();closeSidebar()};
+    box.appendChild(d);
+  });
+}
+function renderStatus(h){
+  $("llmBadge").innerHTML=h&&h.llm
+    ?(h.llm.mock?`<span class="badge mock">Mock 演示</span>`:`<span class="badge real">${esc(h.llm.model||"已接入")}</span>`)
+    :`<span class="badge plain">离线</span>`;
+  $("kbStat").textContent=h?`${h.kb_chunks} 片段`:"–";
+  $("notesStat").textContent=h?`mode: ${h.notes_mode}`:"–";
+}
+function srcHtml(sources){
+  if(!sources||!sources.length)return"";
+  return `<div class="sources">${sources.map(s=>
+    `<span class="src"><b>[${s.idx}]</b> ${esc(s.source)} <span>· ${s.score}</span></span>`).join("")}</div>`;
+}
+function tableHtml(cols,rows){
+  let h='<table class="rt"><tr>'+cols.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
+  rows.slice(0,50).forEach(r=>h+="<tr>"+r.map(v=>`<td>${esc(v)}</td>`).join("")+"</tr>");
+  h+="</table>";
+  if(rows.length>50)h+=`<div class="thin">仅显示前 50 行 / 共 ${rows.length} 行</div>`;
+  return h;
+}
+function bodyHtml(m){
+  if(m.type==="sql"){
+    return `<pre class="code"><code>${esc(m.sql)}</code></pre>`+tableHtml(m.columns,m.rows)
+      +`<div class="meta"><span class="itag sql">数据查询</span><span>返回 ${m.row_count} 行 · 只读 SELECT · ${esc(m.ts||"")}</span></div>`;
+  }
+  if(m.error)return `<div class="card error">⚠️ ${esc(m.text)}</div>
+    <div class="meta"><span>${esc(m.ts||"")}</span></div>`;
+  return `<div class="card"><div class="md">${mdToHtml(m.text)}${generating&&m.streaming?'<span class="cursor"></span>':""}</div>
+    ${srcHtml(m.sources)}
+    <div class="meta"><span class="itag">知识问答</span><span>${esc(m.ts||"")}</span>
+      <button class="cp" onclick="copyText(this.closest('.msg').querySelector('.md').innerText)">复制全文</button></div></div>`;
+}
+function renderChat(){
+  const chat=$("chat"),s=cur();
+  const empty=$("empty");
+  if(!s||!s.messages.length){empty.style.display="";chat.querySelectorAll(":scope > .col").forEach(n=>n.remove());
+    $("title").textContent="新会话";return}
+  empty.style.display="none";
+  chat.querySelectorAll(":scope > .col").forEach(n=>n.remove());
+  $("title").textContent=s.title;
+  const col=document.createElement("div");col.className="col";
+  s.messages.forEach((m,i)=>{
+    const d=document.createElement("div");
+    if(m.role==="user"){d.className="msg user";d.innerHTML=`<div class="bubble">${esc(m.text)}</div>`}
+    else{d.className="msg";d.innerHTML=`<div class="bubble-bot" data-mi="${i}">${bodyHtml(m)}</div>`}
+    col.appendChild(d);
+  });
+  chat.appendChild(col);
+  chat.scrollTop=chat.scrollHeight;
+}
+function renderAll(){renderSidebar();renderChat()}
+
+/* ───────── 发送与流式 ───────── */
+function historyFor(){
+  const s=cur();if(!s)return[];
+  return s.messages.slice(-8).map(m=>({role:m.role,content:m.type==="sql"?("查询: "+m.text+" (SQL: "+m.sql+")"):m.text}));
 }
 async function send(){
-  const input=document.getElementById('q'); const q=input.value.trim(); if(!q)return;
-  input.value=''; add('user', esc(q));
-  const box=add('bot','思考中…');
-  try{
-    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
-    const data=await r.json();
-    if(!r.ok){box.innerHTML='⚠️ '+esc(data.detail||('HTTP '+r.status));return;}
-    if(data.type==='sql'){
-      box.innerHTML=`<div>SQL: <code>${esc(data.sql)}</code></div>`+renderTable(data.columns,data.rows)
-        +`<div class="meta">返回 ${data.row_count} 行 · 只读查询</div>`;
-    }else{
-      let h=esc(data.answer);
-      if(data.sources&&data.sources.length) h+='<div class="meta">依据: '+data.sources.map(s=>`[${s.idx}] ${esc(s.source)} (相似度 ${s.score})`).join(' · ')+'</div>';
-      box.innerHTML=h;
-    }
-  }catch(e){box.innerHTML='⚠️ 请求失败: '+esc(e.message);}
+  const ta=$("q"),q=ta.value.trim();
+  if(!q||generating)return;
+  ta.value="";autoGrow();$("intent").innerHTML="";
+  let s=cur();
+  if(!s){s={id:"s"+Date.now(),title:q.slice(0,20)||"新会话",ts:Date.now(),messages:[]};
+    sessions.unshift(s);activeId=s.id}
+  s.ts=Date.now();
+  s.messages.push({role:"user",text:q,ts:now()});
+  const am={role:"assistant",type:"kb",text:"",sources:[],ts:"",streaming:true};
+  s.messages.push(am);persist();renderChat();
+  await stream(q,am,s);
 }
-add('bot','你好! 我是 Fab 演示助手 🤖\n我可以:\n· 查数据 —— 例如「最近未处理的告警」「P1234 最近一周的良率」\n· 答知识 —— 例如「腔压越限如何处置」(基于知识库, 附引用来源)\n当前运行在 Mock 模式, 可完整演示流程; 接入 vLLM 后回答质量显著提升。');
+async function stream(q,am,s){
+  generating=true;$("send").disabled=true;$("stop").style.display="";
+  abortCtl=new AbortController();
+  const node=()=>document.querySelector(`[data-mi="${s.messages.indexOf(am)}"]`);
+  const paint=()=>{const n=node();if(n)n.innerHTML=bodyHtml(am)};
+  let raf=0;
+  const schedule=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint();
+    const c=$("chat");c.scrollTop=c.scrollHeight})};
+  try{
+    const resp=await fetch("/api/chat/stream",{method:"POST",signal:abortCtl.signal,
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({question:q,history:historyFor().slice(0,-2)})});
+    const reader=resp.body.getReader(),dec=new TextDecoder();
+    let buf="";
+    const handle=(ev,data)=>{
+      if(ev==="meta"){am.type=data.type}
+      else if(ev==="delta"){am.text+=data.text;schedule()}
+      else if(ev==="done"){am.sources=data.sources||[]}
+      else if(ev==="result"){Object.assign(am,{type:"sql",text:data.sql,sql:data.sql,
+        columns:data.columns,rows:data.rows,row_count:data.row_count})}
+      else if(ev==="error"){am.error=true;am.text=data.message||"未知错误"}
+    };
+    while(true){
+      const{value,done}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let i;
+      while((i=buf.indexOf("\n\n"))>=0){
+        const raw=buf.slice(0,i);buf=buf.slice(i+2);
+        let ev="message",data="";
+        raw.split("\n").forEach(line=>{
+          if(line.startsWith("event:"))ev=line.slice(6).trim();
+          else if(line.startsWith("data:"))data+=line.slice(5).trim();
+        });
+        if(data){try{handle(ev,JSON.parse(data))}catch(e){}}
+      }
+    }
+    am.streaming=false;am.ts=now();persist();paint();
+  }catch(e){
+    am.streaming=false;
+    if(e.name==="AbortError"){am.text=(am.text||"")+"\n\n（已停止）";am.ts=now()}
+    else{am.error=true;am.text="请求失败: "+e.message;am.ts=now()}
+    persist();paint();
+  }finally{
+    generating=false;abortCtl=null;
+    $("send").disabled=false;$("stop").style.display="none";renderSidebar();
+  }
+}
+function stopGen(){if(abortCtl)abortCtl.abort()}
+
+/* ───────── 会话操作 ───────── */
+function newChat(){activeId=null;persist();renderAll();closeSidebar();$("q").focus()}
+function clearSession(){const s=cur();if(!s)return;s.messages=[];s.title="新会话";persist();renderChat()}
+function toggleSidebar(){$("sidebar").classList.toggle("open");
+  $("overlay").style.display=$("sidebar").classList.contains("open")?"block":"none"}
+function closeSidebar(){$("sidebar").classList.remove("open");$("overlay").style.display="none"}
+function autoGrow(){const ta=$("q");ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,140)+"px"}
+
+/* ───────── 初始化 ───────── */
+$("chips").innerHTML=CHIPS.map((c,i)=>`<div class="chip" data-c="${i}">${esc(c.t)}<span class="tag">${esc(c.tag)}</span></div>`).join("");
+$("chips").onclick=e=>{const d=e.target.closest(".chip");if(!d)return;$("q").value=CHIPS[+d.dataset.c].t;autoGrow();send()};
+$("newChat").onclick=newChat;
+$("q").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});
+$("q").addEventListener("input",()=>{
+  autoGrow();
+  const q=$("q").value.trim();
+  $("intent").innerHTML=q?`将按 <b class="${HINT_RE.test(q)?"sql":""}">${HINT_RE.test(q)?"数据查询":"知识问答"}</b> 处理`:"";
+});
+fetch("/api/health").then(r=>r.json()).then(renderStatus).catch(()=>renderStatus(null));
+renderAll();
 </script>
 </body>
 </html>

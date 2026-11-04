@@ -25,7 +25,19 @@ sqlbot:
   max_rows: 200
 
 audit:
-  path: "data/audit.log"              # 所有问答留痕 (JSONL), 生产环境建议入库
+  path: "data/audit.log"              # 审计双写: JSONL 文件 + SQLite (v4.0)
+
+# 持久化 (v4.0)
+store:
+  db_path: "data/app.db"              # 用户/会话/消息/审计 SQLite 库 (WAL)
+
+# 认证与角色 (v4.0): viewer < user < admin
+auth:
+  token_ttl_hours: 24                 # 登录令牌有效期
+  bootstrap_users:                    # 首次启动自动创建; 上线后立即改默认密码!
+    - {username: admin,   password: admin123, role: admin,  display_name: 管理员}
+    - {username: zhangsan, password: user123, role: user,   display_name: 张工}
+    - {username: guest,   password: guest123, role: viewer, display_name: 访客}
 
 # HCL Notes (Lotus Notes) 内容接入 —— 内容存于 Domino .nsf, 须经接口抽取
 notes:

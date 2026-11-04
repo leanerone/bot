@@ -8,8 +8,10 @@ config.llm.mock = true 时使用内置 MockLLM: 无 GPU、无推理服务的环�
 """
 from __future__ import annotations
 
+import json
 import re
-from typing import List, Optional
+import time
+from typing import Iterator, List, Optional
 
 import httpx
 
@@ -53,6 +55,36 @@ class OpenAICompatLLM:
         except (KeyError, IndexError) as exc:
             raise LLMError(f"LLM 返回格式异常: {resp.text[:200]}") from exc
 
+    def chat_stream(self, messages: List[dict], temperature: Optional[float] = None) -> Iterator[str]:
+        """流式生成: 逐段产出文本增量 (OpenAI 兼容 stream=true 协议)。"""
+        payload = {"model": self.model, "messages": messages, "stream": True}
+        if temperature is not None:
+            payload["temperature"] = temperature
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                with client.stream(
+                    "POST",
+                    f"{self.base_url}/chat/completions",
+                    json=payload,
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                ) as resp:
+                    resp.raise_for_status()
+                    for line in resp.iter_lines():
+                        line = line.strip()
+                        if not line.startswith("data:"):
+                            continue
+                        data = line[5:].strip()
+                        if data == "[DONE]":
+                            break
+                        try:
+                            delta = json.loads(data)["choices"][0].get("delta", {})
+                        except (json.JSONDecodeError, KeyError, IndexError):
+                            continue
+                        if delta.get("content"):
+                            yield delta["content"]
+        except httpx.HTTPError as exc:
+            raise LLMError(f"LLM 服务不可用 ({self.base_url}): {exc}") from exc
+
 
 class MockLLM:
     """离线演示用: 识别 prompt 类型, 返回占位回答。"""
@@ -91,6 +123,13 @@ class MockLLM:
             if re.search(pattern, q):
                 return sql
         return "SELECT eqp_id, status FROM eqp LIMIT 10"
+
+    def chat_stream(self, messages: List[dict], temperature: Optional[float] = None) -> Iterator[str]:
+        """Mock 流式: 把整段回答切片输出, 模拟打字机效果。"""
+        text = self.chat(messages, temperature)
+        for i in range(0, len(text), 8):
+            yield text[i : i + 8]
+            time.sleep(0.02)
 
 
 def get_llm():

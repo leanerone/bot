@@ -7,6 +7,10 @@
 | 知识问答 | SOP/手册/FAQ 的 RAG 问答, 强制引用来源 | `app/rag/` |
 | 数据查询 | 自然语言 -> SQL, 只读执行, 带 200 行上限 | `app/sqlbot/` |
 
+Web 界面 (`app/web/index.html`, 单文件无构建依赖): 多会话管理 (localStorage
+持久化)、流式打字机输出 (SSE)、Markdown 渲染、引用来源卡片、SQL 结果表格、
+意图提示、会话清空/复制, 支持移动端。
+
 配套文档: [整体技术方案](docs/半导体工厂智能助手技术方案.docx) ·
 [选型与算力评估](docs/选型与算力评估.md)
 
@@ -49,10 +53,12 @@ Ollama 快速替代: `ollama serve` 后 `base_url: "http://127.0.0.1:11434/v1"`�
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | POST | `/api/chat` | 统一入口, 自动分流知识问答/数据查询 |
+| POST | `/api/chat/stream` | 流式版统一入口 (SSE: meta→delta*/result→done) |
 | POST | `/api/kb/ask` | 知识问答直连 |
 | POST | `/api/data/query` | 数据查询直连 |
 | POST | `/api/kb/ingest` | 导入文档 (`{"path": "data/knowledge"}` 可省略) |
-| GET | `/api/health` | 健康检查 |
+| POST | `/api/kb/ingest_notes` | 导入 HCL Notes 内容 (export/domino 双模式) |
+| GET | `/api/health` | 健康检查 (含模型模式/知识库规模) |
 | GET | `/docs` | Swagger 交互文档 |
 
 ## 导入自己的知识库
