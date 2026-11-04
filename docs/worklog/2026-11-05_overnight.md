@@ -84,3 +84,45 @@
 - 会话搜索框 / 来源折叠(默认3条+展开) / SQL复制按钮 / 会话导出 Markdown
 - 过程发现并修复: 补丁经 bash heredoc 传输把 JS 字符串里的 \n 变成真实换行导致整页脚本失效
   -> 建立"node --check 提取脚本"校验环节, 修复后浏览器实测全部恢复 + 新功能就位
+
+### P12 告警轮询守护 (01:16 完成)
+- app/watcher/alarm_watcher.py: 守护线程 + 状态持久化(重启不重推) + 级别过滤 + 可配渠道
+- 默认关闭 (config watcher.enabled); lifespan 启停; build_summary 纯函数可测
+
+### P13 架构文档 + 评测扩充 (01:17 完成)
+- docs/ARCHITECTURE.md: 模块地图/请求流/数据模型/扩展点/设计红线 (面向后续维护者)
+- 评测集扩至 41 条 (kb26+sql15), 全绿
+
+### P14 覆盖率 (01:21 完成)
+- pytest-cov 接入, 总覆盖率 78% -> 88%
+- 补盲区测试: OpenAI 兼容 chat/chat_stream 协议解析(MockTransport) / 连接错误 / MES 适配器 /
+  知识库重建端到端 / 推送未配置 400 / 守护开关 / Domino ReadViewEntries+OpenDocument 协议
+
+### P15 限流 (01:23 完成)
+- app/api/limits.py: 每用户滑动窗口 (默认 30 次/分, 0=不限), 四个问答入口挂载, 超限 429
+- 多实例时换 Redis (check_rate 签名不变); 测试隔离限流器状态
+
+### P16 并发冒烟 (01:25 完成)
+- 双用户并行问答: 会话/消息互不干扰, 意图路由正确 (admin->sql, user->kb)
+- ingest 返回语义修正: chunks(处理数) 与 added(实际新增, 去重后) 分离
+
+### P17 来源治理与溯源体验 (01:29 完成)
+- 知识库来源清单 (GET /api/admin/kb/sources) + 按来源摘除 (DELETE, 磁盘文档不受影响)
+- 会话重命名 UI (✎); 来源卡片点击 -> 片段全文弹层 (溯源体验关键闭环)
+- 过程修复: 弹层标题取值错误 (改 data-src/data-score)
+
+### P18 运维工具集 (01:30 完成)
+- scripts/bench.py 并发压测 (延迟分位数/限流统计)
+- scripts/install.ps1 一键安装 (venv+依赖+自检)
+- scripts/demo_push.py 推送链路演示 (watcher 一轮真实检查)
+
+### P19 文档与截图 (01:31 完成)
+- README 嵌入 3 张真实界面截图 (SQL表格/来源弹层/管理统计)
+- docs/方案附录B-v4平台能力.md (评审版 docx 改版前的线上补充, 列明遗留跟进项)
+- scripts/check_all.sh 一键质量门禁 (lint+pytest+评测+前端语法)
+
+### P20 基线数据 (01:33)
+- bench: 12 请求全成功, p50=453ms / avg=470ms (Mock 模式含落库+审计)
+- eval --llm 路径验证: LLM 回答引用率 26/26 (100%)
+- 发现: 重建测试污染真实 store (Notes 片段被清) —— 已补回;
+  教训: 管理端 rebuild 应只在显式确认下执行, 测试需用隔离目录 (已在测试中用 tmp store)
