@@ -105,6 +105,9 @@ main{flex:1;display:flex;flex-direction:column;min-width:0}
 .src{display:inline-flex;gap:5px;background:#f5f7fa;border:1px solid var(--border);border-radius:8px;
   padding:3px 9px;font-size:11.5px;color:var(--muted);margin:2px 6px 2px 0;max-width:100%}
 .src b{color:#a35a2b;font-weight:600}
+.sources .src:nth-child(n+4){display:none}
+.sources.expanded .src:nth-child(n+4){display:inline-flex}
+.sources .more{border:none;background:none;color:#8fb7ff;cursor:pointer;font-size:11.5px;padding:2px 6px}
 pre.code{background:#10161f;color:#d8e2ef;border-radius:9px;padding:11px 13px;overflow-x:auto;
   font-family:Consolas,Menlo,monospace;font-size:12.5px;margin:8px 0}
 .inline-code{background:#f1f3f6;border:1px solid var(--border);border-radius:4px;padding:0 5px;font-family:Consolas,monospace;font-size:12.5px;color:#a35a2b}
@@ -162,6 +165,9 @@ table.rt tr:nth-child(even) td{background:#faf6f3}
   <aside id="sidebar">
     <div class="brand"><h1>⚙️ Fab Bot</h1><small>半导体工厂智能助手</small></div>
     <button id="newChat">＋ 新会话</button>
+    <input id="sessSearch" placeholder="搜索会话…" oninput="renderSidebar()"
+      style="margin:0 14px 8px;width:calc(100% - 28px);padding:8px 11px;background:var(--sidebar2);
+      border:1px solid #2a3548;color:#e8edf4;border-radius:8px;font-size:12.5px;outline:none">
     <div id="sessions"></div>
     <div class="status">
       <div class="row"><span class="k">模型服务</span><span id="llmBadge"><span class="badge mock">–</span></span></div>
@@ -179,6 +185,7 @@ table.rt tr:nth-child(even) td{background:#faf6f3}
     <div id="topbar">
       <button id="hamb" onclick="toggleSidebar()">☰</button>
       <div class="title" id="title">新会话</div>
+      <button class="tbtn" onclick="exportSession()">导出MD</button>
       <button class="tbtn" onclick="delCurrent()">删除会话</button>
     </div>
     <div id="chat"><div id="empty">
@@ -297,11 +304,30 @@ async function delSession(id){
   renderAll();
 }
 function delCurrent(){if(activeId)delSession(activeId)}
+function exportSession(){
+  const s=cur();if(!s||!s.messages||!s.messages.length){alert("当前会话为空");return}
+  const lines=[`# ${s.title} (导出于 ${new Date().toLocaleString("zh-CN")})`,""];
+  s.messages.forEach(m=>{
+    if(m.role==="user")lines.push(`**🙋 用户:** ${m.text}`,"");
+    else if(m.type==="sql")lines.push(`**🤖 Fab Bot (数据查询, 只读):**`,"```sql",m.sql||m.text,"```",
+      `返回 ${m.row_count??0} 行`,"");
+    else if(m.error)lines.push(`**🤖 Fab Bot (错误):** ${m.text}`,"");
+    else{
+      lines.push(`**🤖 Fab Bot (知识问答):**`,m.text,"");
+      if(m.sources&&m.sources.length)
+        lines.push("来源: "+m.sources.map(x=>`[${x.idx}] ${x.source} (${x.score})`).join(" · "),"");
+    }
+  });
+  const blob=new Blob([lines.join("\n")],{type:"text/markdown;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=`${(s.title||"会话").replace(/[\/:*?"<>|]/g,"_")}.md`;a.click();
+}
 
 /* ───────── 渲染 ───────── */
 function renderSidebar(){
   const box=$("sessions");box.innerHTML="";
-  sessions.forEach(s=>{
+  const kw=($("sessSearch")?.value||"").trim().toLowerCase();
+  sessions.filter(s=>!kw||(s.title||"").toLowerCase().includes(kw)).forEach(s=>{
     const d=document.createElement("div");
     d.className="sess"+(s.id===activeId?" active":"");
     d.innerHTML=`<span class="t">${esc(s.title)}</span><span class="d">${esc(fmtDay(s.ts))}</span><span class="x" title="删除">×</span>`;
@@ -326,8 +352,11 @@ function renderStatus(h){
 }
 function srcHtml(sources){
   if(!sources||!sources.length)return"";
-  return `<div class="sources">${sources.map(s=>
-    `<span class="src"><b>[${s.idx}]</b> ${esc(s.source)} <span>· ${s.score}</span></span>`).join("")}</div>`;
+  const chips=sources.map(s=>
+    `<span class="src"><b>[${s.idx}]</b> ${esc(s.source)} <span>· ${s.score}</span></span>`).join("");
+  const more=sources.length>3?`<button class="more" onclick="this.parentElement.classList.toggle('expanded');
+    this.textContent=this.parentElement.classList.contains('expanded')?'收起来源':'展开全部 ${sources.length} 条'">展开全部 ${sources.length} 条</button>`:"";
+  return `<div class="sources">${chips}${more}</div>`;
 }
 function tableHtml(cols,rows){
   let h='<table class="rt"><tr>'+cols.map(c=>`<th>${esc(c)}</th>`).join("")+"</tr>";
@@ -353,7 +382,8 @@ async function rate(id,val){
 function bodyHtml(m){
   if(m.type==="sql"){
     return `<pre class="code"><code>${esc(m.sql||m.text)}</code></pre>`+tableHtml(m.columns,m.rows)
-      +`<div class="meta"><span class="itag sql">数据查询</span><span>返回 ${m.row_count??0} 行 · 只读 SELECT · ${esc(m.ts||"")}</span>${rateHtml(m)}</div>`;
+      +`<div class="meta"><span class="itag sql">数据查询</span><span>返回 ${m.row_count??0} 行 · 只读 SELECT · ${esc(m.ts||"")}</span>
+      <button class="cp" onclick="copyText('${esc(m.sql||m.text).replace(/'/g,"'")}')">复制SQL</button>${rateHtml(m)}</div>`;
   }
   if(m.error)return `<div class="card error">⚠️ ${esc(m.text)}</div>
     <div class="meta"><span>${esc(m.ts||"")}</span></div>`;
