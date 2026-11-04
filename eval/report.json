@@ -1,5 +1,5 @@
 {
- "time": "2026-11-05T02:59:57",
+ "time": "2026-11-05T03:20:33",
  "mode": "offline",
  "topk": 6,
  "kb": {
@@ -33,7 +33,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 2
+   "ms": 3
   },
   {
    "id": "kb-002",
@@ -144,7 +144,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "CMP研磨机台异常处置SOP.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-010",
@@ -278,7 +278,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-020",
@@ -506,7 +506,7 @@
    "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
    "rows": 4,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-004",
@@ -578,7 +578,7 @@
    "sql": "SELECT dt, product, die_yield FROM yield_daily ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-012",
@@ -614,7 +614,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   }
  ]
 }
