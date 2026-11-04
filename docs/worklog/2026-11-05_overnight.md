@@ -152,3 +152,16 @@
   导致检索互相稀释"的结构性问题 (kb-031 案例)
 - 检索调优: 参数扫描 (k x bm25权重 20 组合) 确认 top_k=6 全绿; eval/pipeline 默认对齐
 - 最终: 知识 34/34, SQL 15/15, 意图 49/49, 63 tests 全绿
+
+### P27 备份脚本双平台验证 (01:59 完成)
+- backup.ps1 / backup.sh 实际运行通过, 备份含 app.db/knowledge/vector_store/audit
+- 发现: Git Bash 无 sqlite3 CLI 时 fallback 全量拷贝 (低峰执行或停服, DEPLOY 已注明)
+
+### P28 安全加固第二轮 (02:02 完成)
+- 登录防爆破: 同一 用户名+IP 5 分钟 10 次上限 (429), 正确密码也被拦 (防在线猜测)
+- 知识导入路径白名单: path 越界 (如 C:/Windows / ../../etc) 返回 400 —— 修复路径穿越漏洞
+- tests: 登录限流 + 路径穿越 2 项; conftest 增加 autouse 限流器隔离夹具
+
+### P29 预验收自测 (02:04 完成, 29/29)
+- scripts/pre_acceptance.py: 按 ACCEPTANCE.md 逐项自动执行 (A部署/B权限/C知识/D查询/E Notes/F后台/G稳定)
+- 报告: docs/worklog/pre-acceptance.md (28->29 项, C3 调整为护栏存在性检查+Mock 说明)
