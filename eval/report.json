@@ -1,16 +1,16 @@
 {
- "time": "2026-11-05T01:07:01",
+ "time": "2026-11-05T01:17:47",
  "mode": "offline",
  "topk": 5,
  "kb": {
-  "total": 18,
-  "hit": 18,
+  "total": 26,
+  "hit": 26,
   "hit_rate": 1.0,
   "avg_ms": 0
  },
  "sql": {
-  "total": 12,
-  "pass": 12,
+  "total": 15,
+  "pass": 15,
   "pass_rate": 1.0,
   "avg_ms": 0
  },
@@ -27,7 +27,7 @@
    "miss_terms": [],
    "n_sources": 5,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 0
+   "ms": 2
   },
   {
    "id": "kb-002",
@@ -83,7 +83,7 @@
    "miss_terms": [],
    "n_sources": 5,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-006",
@@ -124,7 +124,7 @@
    "miss_terms": [],
    "n_sources": 5,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-009",
@@ -138,7 +138,7 @@
    "miss_terms": [],
    "n_sources": 5,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-010",
@@ -177,7 +177,7 @@
    "miss_terms": [],
    "n_sources": 5,
    "top1_source": "notes://KB/process.nsf/C1257A1B · 腔压越限处置经验（夜班）",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-013",
@@ -231,7 +231,7 @@
    "miss_terms": [],
    "n_sources": 5,
    "top1_source": "notes://KB/process.nsf/C1257A1B · 腔压越限处置经验（夜班）",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-017",
@@ -260,6 +260,110 @@
    "ms": 0
   },
   {
+   "id": "kb-019",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "Stability Test",
+    "规格"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-020",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "Stability Test",
+    "刻蚀速率"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-021",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "每周",
+    "油位",
+    "水温"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-022",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "机台号",
+    "告警码",
+    "lot"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-023",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "泵组停机",
+    "SF6"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-024",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "20%"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-025",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "开度反馈"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-026",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "LOTO",
+    "防静电"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
    "id": "sql-001",
    "type": "sql",
    "pass": true,
@@ -275,7 +379,7 @@
    "sql": "SELECT eqp_group, COUNT(*) AS cnt FROM eqp WHERE status = 'DOWN' GROUP BY eqp_group ORDER BY cnt DESC LIMIT 20",
    "rows": 1,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-003",
@@ -284,7 +388,7 @@
    "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
    "rows": 4,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-004",
@@ -293,7 +397,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-005",
@@ -302,7 +406,7 @@
    "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-006",
@@ -320,7 +424,7 @@
    "sql": "SELECT dt, product, die_yield FROM yield_daily ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-008",
@@ -366,6 +470,33 @@
    "rows": 10,
    "missing_columns": [],
    "ms": 0
+  },
+  {
+   "id": "sql-013",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
+   "rows": 10,
+   "missing_columns": [],
+   "ms": 0
+  },
+  {
+   "id": "sql-014",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
+   "rows": 4,
+   "missing_columns": [],
+   "ms": 0
+  },
+  {
+   "id": "sql-015",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
+   "rows": 13,
+   "missing_columns": [],
+   "ms": 1
   }
  ]
 }
