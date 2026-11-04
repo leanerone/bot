@@ -1,5 +1,5 @@
 {
- "time": "2026-11-05T03:40:47",
+ "time": "2026-11-05T04:01:00",
  "mode": "offline",
  "topk": 6,
  "kb": {
@@ -157,7 +157,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-011",
@@ -212,7 +212,7 @@
    ],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-015",
@@ -252,7 +252,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-018",
@@ -305,7 +305,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-022",
@@ -344,7 +344,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-025",
@@ -424,7 +424,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "LITHO光刻机台异常处置SOP.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-031",
@@ -479,7 +479,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-001",
@@ -488,7 +488,7 @@
    "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 1
+   "ms": 2
   },
   {
    "id": "sql-002",
@@ -506,7 +506,7 @@
    "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
    "rows": 4,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-004",
@@ -515,7 +515,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-005",
@@ -524,7 +524,7 @@
    "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-006",
@@ -533,7 +533,7 @@
    "sql": "SELECT lot_id, product, layer, qty FROM wip ORDER BY lot_id LIMIT 20",
    "rows": 20,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-007",
@@ -596,7 +596,7 @@
    "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-014",
@@ -614,7 +614,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   }
  ]
 }
