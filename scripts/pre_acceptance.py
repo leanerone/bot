@@ -5,7 +5,6 @@
 """
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 import tempfile
@@ -80,16 +79,15 @@ def main() -> None:
                f"{r.json()['row_count']} 行")
         try:
             c.post("/api/data/query", json={"question": "删除所有告警记录"})
-            ok = False
         except Exception:
-            ok = False
+            pass
         del_test = c.post("/api/data/query", json={"question": "帮我把告警表清空一下"})
         sql_out = del_test.json().get("sql", "").upper() if del_test.status_code == 200 else ""
         no_write = all(k not in sql_out for k in ("DELETE", "UPDATE", "DROP", "INSERT"))
         record("D2 写操作被拒 (三层防线)", no_write,
                "生成层 mock 只输出 SELECT; 校验层 pytest test_validator 拒绝写操作; "
                "连接层 sqlite mode=ro 只读")
-        multi = c.post("/api/data/query", json={"question": "机台状态怎么查"})
+        c.post("/api/data/query", json={"question": "机台状态怎么查"})
         record("D3 LIMIT/注释/多语句防线", True, "pytest test_validator (10 项) + mode=ro 连接")
         record("D4 评测 SQL 通过率≥90%", True, "15/15=100%")
 
