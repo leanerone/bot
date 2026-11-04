@@ -93,12 +93,12 @@ def test_chat_session_and_messages():
     db.add_message(s["id"], "user", "", "腔压越限怎么办")
     db.add_message(s["id"], "assistant", "kb", "先 Hold 批次…",
                    sources=[{"idx": 1, "source": "SOP.md"}], sql=None)
-    msgs = db.list_messages(s["id"])
+    msgs = db.list_messages(s["id"])["messages"]
     assert len(msgs) == 2 and msgs[0]["role"] == "user"
     assert msgs[1]["sources"][0]["source"] == "SOP.md"
     # 评分
     assert db.rate_message(msgs[1]["id"], "up")
-    assert db.list_messages(s["id"])[1]["rating"] == "up"
+    assert db.list_messages(s["id"])["messages"][1]["rating"] == "up"
     try:
         db.rate_message(msgs[1]["id"], "bad")
         raise AssertionError("非法评分应报错")
@@ -111,7 +111,7 @@ def test_chat_session_and_messages():
     # 列表与统计
     assert db.list_chat_sessions(u["id"])[0]["message_count"] == 2
     assert db.delete_chat_session(s["id"]) is True
-    assert db.list_messages(s["id"]) == []
+    assert db.list_messages(s["id"])["messages"] == []
 
 
 def test_rename_session():

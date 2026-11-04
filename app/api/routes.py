@@ -171,29 +171,46 @@ def chat_stream(body: AskIn, request: Request):
 def kb_ask(body: AskIn, request: Request):
     user = require_user(request)
     check_rate(user["id"])
+    q = body.question.strip()
+    t0 = time.time()
+    result = {"type": "kb", **pipeline.ask(q, history=body.history)}
     if body.session_id:
-        session = _resolve_session(user, body.session_id, body.question.strip())
-        result = {"type": "kb", **pipeline.ask(body.question.strip(), history=body.history)}
+        session = db.get_chat_session(body.session_id, user_id=user["id"])
+        if not session:
+            raise HTTPException(404, "会话不存在或无权访问")
+        db.add_message(session["id"], "user", "", q)
         mid = _persist_answer(session["id"], result)
+        audit_mod.record(user["username"], "/api/kb/ask", "kb", q,
+                         int((time.time() - t0) * 1000))
         return {"session_id": session["id"], "assistant_message_id": mid, **result}
-    return {"type": "kb", **pipeline.ask(body.question.strip(), history=body.history)}
+    audit_mod.record(user["username"], "/api/kb/ask", "kb", q,
+                     int((time.time() - t0) * 1000))
+    return result
 
 
 @router.post("/data/query")
 def data_query(body: AskIn, request: Request):
     user = require_user(request)
     check_rate(user["id"])
+    q = body.question.strip()
+    t0 = time.time()
     try:
-        result = {"type": "sql", **text2sql.query(body.question.strip(), history=body.history)}
+        result = {"type": "sql", **text2sql.query(q, history=body.history)}
     except SQLRejected as exc:
+        audit_mod.record(user["username"], "/api/data/query", "sql", q,
+                         int((time.time() - t0) * 1000), status="rejected")
         raise HTTPException(400, f"SQL 安全校验未通过: {exc}") from exc
     if body.session_id:
         session = db.get_chat_session(body.session_id, user_id=user["id"])
         if not session:
             raise HTTPException(404, "会话不存在或无权访问")
-        db.add_message(session["id"], "user", "", body.question.strip())
+        db.add_message(session["id"], "user", "", q)
         mid = _persist_answer(session["id"], result)
+        audit_mod.record(user["username"], "/api/data/query", "sql", q,
+                         int((time.time() - t0) * 1000))
         return {"session_id": session["id"], "assistant_message_id": mid, **result}
+    audit_mod.record(user["username"], "/api/data/query", "sql", q,
+                     int((time.time() - t0) * 1000))
     return result
 
 
