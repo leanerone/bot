@@ -76,6 +76,10 @@ class LocalVectorStore:
             counter[m["source"]] = counter.get(m["source"], 0) + 1
         return [{"source": s, "chunks": c} for s, c in sorted(counter.items())]
 
+    def chunks_by_source(self, source: str) -> List[Dict[str, Any]]:
+        """某来源的全部片段 (管理端预览)。"""
+        return [{"text": m["text"]} for m in self.metas if m["source"] == source]
+
     def delete_by_source(self, source: str) -> int:
         """按来源删除全部片段 (文档下线/换版时用), 返回删除条数。"""
         with self._lock:

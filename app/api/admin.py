@@ -162,3 +162,23 @@ def kb_delete_source(request: Request, name: str):
     require_role(request, "admin")
     removed = get_store().delete_by_source(name)
     return {"ok": True, "removed": removed, "kb_chunks": len(get_store())}
+
+
+@router.get("/kb/source-chunks")
+def kb_source_chunks(request: Request, name: str):
+    require_role(request, "admin")
+    return {"source": name, "chunks": get_store().chunks_by_source(name)}
+
+
+@router.get("/sessions")
+def admin_sessions(request: Request, limit: int = 200):
+    require_role(request, "admin")
+    return {"sessions": db.list_all_sessions(min(max(limit, 1), 500))}
+
+
+@router.delete("/sessions/{session_id}")
+def admin_delete_session(session_id: str, request: Request):
+    require_role(request, "admin")
+    if not db.admin_delete_session(session_id):
+        raise HTTPException(404, "会话不存在")
+    return {"ok": True}

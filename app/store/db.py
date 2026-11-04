@@ -288,6 +288,27 @@ def list_chat_sessions(user_id: str) -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+def list_all_sessions(limit: int = 200) -> List[Dict[str, Any]]:
+    """管理员视角: 全用户会话 (含用户名与消息数)。"""
+    conn = get_conn()
+    rows = conn.execute(
+        """SELECT s.*, u.username, COUNT(m.id) AS message_count
+           FROM chat_sessions s
+           LEFT JOIN users u ON u.id = s.user_id
+           LEFT JOIN messages m ON m.session_id = s.id
+           GROUP BY s.id ORDER BY s.updated_at DESC LIMIT ?""",
+        (limit,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def admin_delete_session(session_id: str) -> bool:
+    """管理员删除任意会话 (不校验属主)。"""
+    if not get_chat_session(session_id):
+        return False
+    return delete_chat_session(session_id)
+
+
 def get_chat_session(session_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     conn = get_conn()
     row = conn.execute("SELECT * FROM chat_sessions WHERE id = ?", (session_id,)).fetchone()

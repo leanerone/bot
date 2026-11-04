@@ -20,6 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from app.api.intent import classify  # noqa: E402
 from app.rag import pipeline  # noqa: E402
 from app.sqlbot import text2sql  # noqa: E402
 from app.sqlbot.validator import SQLRejected  # noqa: E402
@@ -79,6 +80,10 @@ def main() -> None:
 
     kb_hit = sum(1 for r in kb_rows if r["hit"])
     sql_pass = sum(1 for r in sql_rows if r["pass"])
+    # 意图路由指标: 评测项 type 即期望意图
+    intent_rows = [{"id": it["id"], "expected": it["type"],
+                    "got": classify(it["question"])["intent"]} for it in items]
+    intent_ok = sum(1 for r in intent_rows if r["expected"] == r["got"])
     report = {
         "time": datetime.now().isoformat(timespec="seconds"),
         "mode": "offline" + ("+llm" if args.llm else ""),
@@ -89,6 +94,9 @@ def main() -> None:
         "sql": {"total": len(sql_rows), "pass": sql_pass,
                 "pass_rate": round(sql_pass / len(sql_rows), 4) if sql_rows else None,
                 "avg_ms": round(sum(r["ms"] for r in sql_rows) / len(sql_rows)) if sql_rows else None},
+        "intent": {"total": len(intent_rows), "correct": intent_ok,
+                   "accuracy": round(intent_ok / len(intent_rows), 4) if intent_rows else None,
+                   "misses": [r for r in intent_rows if r["expected"] != r["got"]]},
         "detail": kb_rows + sql_rows,
     }
 
@@ -121,6 +129,7 @@ def main() -> None:
         "|---|---|",
         f"| 知识检索命中率 | {kb_hit}/{len(kb_rows)} ({report['kb']['hit_rate']}) |",
         f"| Text2SQL 通过率 | {sql_pass}/{len(sql_rows)} ({report['sql']['pass_rate']}) |",
+        f"| 意图路由准确率 | {intent_ok}/{len(intent_rows)} ({report['intent']['accuracy']}) |",
         f"| 检索平均耗时 | {report['kb']['avg_ms']} ms |",
         f"| SQL 平均耗时 | {report['sql']['avg_ms']} ms |",
     ]
@@ -129,6 +138,9 @@ def main() -> None:
                      f"({report['llm_citation']['rate']}) |")
     lines += ["", "## 未命中项", ""]
     lines += [f"- {r['id']}: 缺少 {r['miss_terms']}" for r in kb_rows if not r["hit"]] or ["- (无)"]
+    lines += ["", "## 意图路由误判", ""]
+    lines += [f"- {r['id']}: 期望 {r['expected']} 实际 {r['got']}"
+              for r in report["intent"]["misses"]] or ["- (无)"]
     lines += ["", "## SQL 失败项", ""]
     failed = [r for r in sql_rows if not r["pass"]]
     lines += [
