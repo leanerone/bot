@@ -181,3 +181,4 @@
 - GATE6 (04:01): exit=0
 - GATE7 (04:21): exit=0
 - GATE8 (04:41): exit=0
+- GATE9 (05:01): exit=0
