@@ -26,19 +26,37 @@ class LocalVectorStore:
         if self.meta_file.exists() and self.vec_file.exists():
             self.metas = json.loads(self.meta_file.read_text(encoding="utf-8"))
             self.vectors = np.load(self.vec_file)
+        self._keys = {self._key(m) for m in self.metas}
+
+    @staticmethod
+    def _key(meta: Dict[str, Any]) -> str:
+        """片段唯一键: 来源 + 正文 (重复导入去重用)。"""
+        return f"{meta.get('source', '')}|{meta.get('text', '')}"
 
     def __len__(self) -> int:
         return len(self.metas)
 
-    def add(self, vectors: List[List[float]], metas: List[Dict[str, Any]]) -> None:
+    def add(self, vectors: List[List[float]], metas: List[Dict[str, Any]]) -> int:
+        """批量入库; 重复片段 (来源+正文相同) 自动跳过, 返回实际新增条数。"""
         if len(vectors) != len(metas):
             raise ValueError("vectors 与 metas 数量不一致")
         with self._lock:
-            new = np.asarray(vectors, dtype=np.float32)
+            new_vecs, new_metas = [], []
+            for vec, meta in zip(vectors, metas):
+                key = self._key(meta)
+                if key in self._keys:
+                    continue
+                self._keys.add(key)
+                new_vecs.append(vec)
+                new_metas.append(meta)
+            if not new_vecs:
+                return 0
+            new = np.asarray(new_vecs, dtype=np.float32)
             self.vectors = new if self.vectors.shape[0] == 0 else np.vstack([self.vectors, new])
-            self.metas.extend(metas)
+            self.metas.extend(new_metas)
             self._matrix = None
             self.save()
+            return len(new_vecs)
 
     def save(self) -> None:
         np.save(self.vec_file, self.vectors)

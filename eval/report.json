@@ -1,0 +1,371 @@
+{
+ "time": "2026-11-05T00:58:17",
+ "mode": "offline",
+ "topk": 5,
+ "kb": {
+  "total": 18,
+  "hit": 18,
+  "hit_rate": 1.0,
+  "avg_ms": 0
+ },
+ "sql": {
+  "total": 12,
+  "pass": 12,
+  "pass_rate": 1.0,
+  "avg_ms": 0
+ },
+ "detail": [
+  {
+   "id": "kb-001",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "E0010",
+    "Match Network",
+    "Stability"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 2
+  },
+  {
+   "id": "kb-002",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "Throttle Valve",
+    "Leak Check",
+    "Seasoning"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "notes://KB/process.nsf/C1257A1B · 腔压越限处置经验（夜班）/附件/处置检查单",
+   "ms": 0
+  },
+  {
+   "id": "kb-003",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "Monitor Wafer",
+    "Seasoning",
+    "关注"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-004",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "CRITICAL",
+    "Hold",
+    "Q-time"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-005",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "SPC",
+    "WIP",
+    "Particle"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-006",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "Hold",
+    "rework",
+    "HF Last"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 1
+  },
+  {
+   "id": "kb-007",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "回温",
+    "PEB",
+    "显影"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-008",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "LOTO",
+    "上锁挂牌"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-009",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "基压",
+    "反射功率",
+    "MFC"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-010",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "Seasoning",
+    "洁净腔体"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "notes://KB/process.nsf/C1257A1B · 腔压越限处置经验（夜班）",
+   "ms": 0
+  },
+  {
+   "id": "kb-011",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "5 mTorr",
+    "升压率"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "notes://KB/process.nsf/C1257A1B · METRO-01 每日校准注意事项",
+   "ms": 0
+  },
+  {
+   "id": "kb-012",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "Throttle Valve",
+    "干泵"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "notes://KB/process.nsf/C1257A1B · 腔压越限处置经验（夜班）",
+   "ms": 0
+  },
+  {
+   "id": "kb-013",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "SPC",
+    "机台",
+    "告警"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "工艺常见问题FAQ.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-014",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "预热",
+    "标准片",
+    "Energy Check"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "notes://KB/process.nsf/C1257A1B · METRO-01 每日校准注意事项",
+   "ms": 0
+  },
+  {
+   "id": "kb-015",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "Stability Test",
+    "FSE"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-016",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "干泵出口",
+    "泄漏"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "notes://KB/process.nsf/C1257A1B · 腔压越限处置经验（夜班）",
+   "ms": 0
+  },
+  {
+   "id": "kb-017",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "泄压",
+    "抽真空"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 0
+  },
+  {
+   "id": "kb-018",
+   "type": "kb",
+   "hit": true,
+   "hit_terms": [
+    "防静电",
+    "护目镜"
+   ],
+   "miss_terms": [],
+   "n_sources": 5,
+   "top1_source": "ETCH刻蚀机台异常处置SOP.md",
+   "ms": 1
+  },
+  {
+   "id": "sql-001",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
+   "rows": 10,
+   "missing_columns": [],
+   "ms": 0
+  },
+  {
+   "id": "sql-002",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT eqp_group, COUNT(*) AS cnt FROM eqp WHERE status = 'DOWN' GROUP BY eqp_group ORDER BY cnt DESC LIMIT 20",
+   "rows": 1,
+   "missing_columns": [],
+   "ms": 0
+  },
+  {
+   "id": "sql-003",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
+   "rows": 4,
+   "missing_columns": [],
+   "ms": 1
+  },
+  {
+   "id": "sql-004",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
+   "rows": 13,
+   "missing_columns": [],
+   "ms": 1
+  },
+  {
+   "id": "sql-005",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
+   "rows": 10,
+   "missing_columns": [],
+   "ms": 0
+  },
+  {
+   "id": "sql-006",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT lot_id, product, layer, qty FROM wip ORDER BY lot_id LIMIT 20",
+   "rows": 20,
+   "missing_columns": [],
+   "ms": 1
+  },
+  {
+   "id": "sql-007",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT dt, product, die_yield FROM yield_daily ORDER BY dt DESC LIMIT 10",
+   "rows": 10,
+   "missing_columns": [],
+   "ms": 0
+  },
+  {
+   "id": "sql-008",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
+   "rows": 13,
+   "missing_columns": [],
+   "ms": 0
+  },
+  {
+   "id": "sql-009",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
+   "rows": 10,
+   "missing_columns": [],
+   "ms": 0
+  },
+  {
+   "id": "sql-010",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT lot_id, product, layer, qty FROM wip ORDER BY lot_id LIMIT 20",
+   "rows": 20,
+   "missing_columns": [],
+   "ms": 0
+  },
+  {
+   "id": "sql-011",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT dt, product, die_yield FROM yield_daily ORDER BY dt DESC LIMIT 10",
+   "rows": 10,
+   "missing_columns": [],
+   "ms": 1
+  },
+  {
+   "id": "sql-012",
+   "type": "sql",
+   "pass": true,
+   "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
+   "rows": 10,
+   "missing_columns": [],
+   "ms": 0
+  }
+ ]
+}

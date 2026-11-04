@@ -77,7 +77,8 @@ def _retrieve(question: str, top_k: Optional[int] = None) -> Tuple[Optional[str]
     ]
     context = "\n\n".join(f"[{i + 1}] 来源: {h['source']}\n{h['text']}" for i, h in enumerate(hits))
     sources = [
-        {"idx": i + 1, "source": h["source"], "score": h["score"], "excerpt": h["text"][:120]}
+        {"idx": i + 1, "source": h["source"], "score": h["score"],
+         "excerpt": h["text"][:120], "text": h["text"]}
         for i, h in enumerate(hits)
     ]
     return context, sources
