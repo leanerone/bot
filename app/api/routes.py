@@ -6,7 +6,6 @@ SQLite 会话, 支持追问与历史回看。生产建议把关键词意图换�
 from __future__ import annotations
 
 import json
-import re
 import time
 from typing import List, Optional
 
@@ -17,6 +16,7 @@ from pydantic import BaseModel
 from app.adapters.hcl_notes import ingest_notes_domino, ingest_notes_export
 from app.api import audit as audit_mod
 from app.api.deps import require_role, require_user
+from app.api.intent import classify
 from app.config import abs_path, cfg
 from app.llm.client import LLMError
 from app.rag import pipeline
@@ -26,12 +26,6 @@ from app.sqlbot import text2sql
 from app.sqlbot.validator import SQLRejected
 
 router = APIRouter(prefix="/api")
-
-# 意图粗分: 命中 -> 数据查询, 否则知识问答
-_DATA_HINT = re.compile(
-    r"多少|几个|统计|查询|查一下|排名|top|趋势|良率|wip|在制|机台|告警|报警|数量|平均|最近",
-    re.I,
-)
 
 
 class AskIn(BaseModel):
@@ -95,7 +89,7 @@ def chat(body: AskIn, request: Request):
     t0 = time.time()
     session = _resolve_session(user, body.session_id, q)
     try:
-        if _DATA_HINT.search(q):
+        if classify(q)["intent"] == "sql":
             result = {"type": "sql", **text2sql.query(q, history=body.history)}
         else:
             result = {"type": "kb", **pipeline.ask(q, history=body.history)}
@@ -128,7 +122,7 @@ def chat_stream(body: AskIn, request: Request):
         result_holder: dict = {}
         persisted = False
         try:
-            if _DATA_HINT.search(q):
+            if classify(q)["intent"] == "sql":
                 intent = "sql"
                 yield sse("meta", {"type": "sql", "session_id": session["id"]})
                 result_holder = {"type": "sql", **text2sql.query(q, history=history)}
