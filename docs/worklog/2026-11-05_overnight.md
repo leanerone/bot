@@ -180,3 +180,4 @@
 - GATE5 (03:40): exit=0
 - GATE6 (04:01): exit=0
 - GATE7 (04:21): exit=0
+- GATE8 (04:41): exit=0
