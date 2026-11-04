@@ -301,19 +301,34 @@ async function loadSessions(){
   // 保留已在前端加载过的消息数组 (服务端列表只含元数据)
   sessions=list.map(n=>{const old=sessions.find(o=>o.id===n.id);if(old&&old.messages)n.messages=old.messages;return n});
 }
-async function openSession(id){
+async function openSession(id, beforeId){
   if(generating)return;
-  activeId=id;
-  const r=await fetch(`/api/sessions/${id}/messages`);
+  if(!beforeId)activeId=id;
+  const qs=beforeId?`?before_id=${beforeId}&limit=50`:"?limit=50";
+  const r=await fetch(`/api/sessions/${id}/messages${qs}`);
   if(!r.ok)return;
-  const msgs=(await r.json()).messages.map(m=>m.role==="user"
-    ? {role:"user",text:m.content,ts:m.created_at}
+  const page=await r.json();
+  const msgs=page.messages.map(m=>m.role==="user"
+    ? {role:"user",id:m.id,text:m.content,ts:m.created_at}
     : {role:"assistant",id:m.id,type:m.type||(m.sql_text?"sql":"kb"),text:m.type==="sql"||m.sql_text?m.sql_text:m.content,
        sources:m.sources||[],sql:m.sql_text,columns:m.columns||[],rows:m.rows||[],row_count:m.row_count||0,
        rating:m.rating,ts:m.created_at});
   const s=sessions.find(x=>x.id===id);
-  if(s)s.messages=msgs;
-  renderAll();closeSidebar();
+  if(!s)return;
+  if(beforeId){
+    s.messages=[...msgs,...(s.messages||[])];
+  }else{
+    s.messages=msgs;
+  }
+  s.hasMore=page.has_more;
+  s.oldestId=s.messages.length?s.messages[0].id:null;
+  renderAll();
+  if(beforeId){const b=document.getElementById("earlierBtn");if(b)b.scrollIntoView({block:"center"})}
+  closeSidebar();
+}
+async function loadEarlier(){
+  const s=cur();if(!s||!s.hasMore||!s.oldestId||generating)return;
+  await openSession(s.id,s.oldestId);
 }
 async function delSession(id){
   if(!confirm("确认删除该会话?"))return;
@@ -429,6 +444,8 @@ function renderChat(){
   empty.style.display="none";
   $("title").textContent=s.title||"会话";
   const col=document.createElement("div");col.className="col";
+  if(s.hasMore){col.innerHTML=`<div style="text-align:center;margin-bottom:14px">
+    <button class="tbtn" id="earlierBtn" onclick="loadEarlier()">加载更早消息</button></div>`;}
   s.messages.forEach((m,i)=>{
     const d=document.createElement("div");
     if(m.role==="user"){d.className="msg user";d.innerHTML=`<div class="bubble">${esc(m.text)}</div>`}
@@ -519,6 +536,17 @@ function toggleSidebar(){$("sidebar").classList.toggle("open");
   $("overlay").style.display=$("sidebar").classList.contains("open")?"block":"none"}
 function closeSidebar(){$("sidebar").classList.remove("open");$("overlay").style.display="none"}
 function autoGrow(){const ta=$("q");ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,140)+"px"}
+
+/* ───────── 调试桥 (外部工具经 window.__fab 驱动页面真实状态) ───────── */
+window.__fab = {
+  sessions: () => sessions.map(s => ({id: s.id, title: s.title, msgs: s.messages ? s.messages.length : 0,
+    hasMore: !!s.hasMore})),
+  open: id => openSession(id),
+  loadEarlier: () => loadEarlier(),
+  state: () => { const s = cur(); return s ? {id: s.id, msgs: s.messages.length,
+    hasMore: !!s.hasMore, oldestId: s.oldestId} : null; },
+  me: () => me,
+};
 
 /* ───────── 启动 ───────── */
 $("chips").innerHTML=CHIPS.map((c,i)=>`<div class="chip" data-c="${i}">${esc(c.t)}<span class="tag">${esc(c.tag)}</span></div>`).join("");
