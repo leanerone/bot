@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "description": "Fab Bot 离线评测集: kb=知识检索命中, sql=Text2SQL 可执行性。共 49 条; 上线前请用真实问题扩充至 50~100 条",
+  "description": "Fab Bot 离线评测集: kb=知识检索命中, sql=Text2SQL 可执行性。共 59 条; 上线前请用真实问题替换扩充",
   "items": [
     {
       "id": "kb-001",
@@ -451,6 +451,95 @@
       "expect": [
         "防碱手套",
         "护目镜"
+      ]
+    },
+    {
+      "id": "kb-035",
+      "type": "kb",
+      "question": "LITHO 机台的日常点检有哪些？",
+      "expect": [
+        "光源",
+        "显影液温度",
+        "Filter"
+      ]
+    },
+    {
+      "id": "kb-036",
+      "type": "kb",
+      "question": "能量漂移是阶跃还是缓变怎么区分？",
+      "expect": [
+        "阶跃",
+        "缓变",
+        "Energy Check"
+      ]
+    },
+    {
+      "id": "kb-037",
+      "type": "kb",
+      "question": "换灯之后还是漂移怎么办？",
+      "expect": [
+        "FSE",
+        "工艺工程师"
+      ]
+    },
+    {
+      "id": "kb-038",
+      "type": "kb",
+      "question": "显影液温度的规格是多少？",
+      "expect": [
+        "23",
+        "0.5"
+      ]
+    },
+    {
+      "id": "kb-039",
+      "type": "kb",
+      "question": "研磨压力和转盘转速要查什么？",
+      "expect": [
+        "工艺单"
+      ]
+    },
+    {
+      "id": "kb-040",
+      "type": "kb",
+      "question": "CMP 修盘后不收敛怎么升级？",
+      "expect": [
+        "修盘头",
+        "保持环"
+      ]
+    },
+    {
+      "id": "kb-041",
+      "type": "kb",
+      "question": "CMP 废液怎么处理？",
+      "expect": [
+        "EHS",
+        "分类排放"
+      ]
+    },
+    {
+      "id": "kb-042",
+      "type": "kb",
+      "question": "光刻胶上机前回温要多久？",
+      "expect": [
+        "2 小时"
+      ]
+    },
+    {
+      "id": "sql-016",
+      "type": "sql",
+      "question": "LITHO 区的机台列表",
+      "expect_columns": [
+        "eqp_id",
+        "eqp_group"
+      ]
+    },
+    {
+      "id": "sql-017",
+      "type": "sql",
+      "question": "PM 状态的机台有几台？",
+      "expect_columns": [
+        "cnt"
       ]
     }
   ]
