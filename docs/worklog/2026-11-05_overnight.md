@@ -199,3 +199,38 @@
   + 目录结构表更新至 13 个模块; 完整链路重跑 (TOC占位/页码域/TOC去重/postcheck 9/9) + PDF 渲染视觉验收通过 (15页)
 - E3 v4.2 打标推送 (bad791a)
 - 至此夜间遗留清单仅剩: SSO/LDAP 对接与 Postgres 迁移 (需公司基建, 转正式阶段实施)
+
+## 🖥️ 桌面应用交付 (2026-11-06, desktop 分支)
+
+### D-1 规划与选型 (按公司栈 Java/Python/C# 重定)
+- 弃 Tauri(Rust)/Flutter(Dart); 选定 C# WPF 主壳 + WebView2 承载 React/TS iOS 风格 UI + Python sidecar
+- 规划文档 docs/DESKTOP_PLAN.md (选型理由/iOS设计系统/三层IPC约定/路线图/WorkBuddy对标)
+
+### D-2 后端适配 (65 测试保持全绿)
+- main.py: 桌面 SPA 托管 (desktop/ui/dist 同源服务, Cookie 免跨域)
+- config.py: FABBOT_ROOT 环境变量 (PyInstaller sidecar 可写数据目录)
+- 新增任务中心 API: /api/tasks/alarms + /summary (告警值守面板数据)
+
+### D-3 前端 desktop/ui (React18+TS+Tailwind, 六模块)
+- iOS 设计 token: 语义色板/MiSans/16px 卡片/spring 动效/亮暗双主题
+- 模块: 登录 / 工作台 / AI对话(流式+引用+反馈+导出) / 知识库(拖拽导入+来源治理) /
+  数据台(查询+表格) / 任务中心(告警面板) / 设置(主题/密码/服务状态)
+- vite build 产物 178KB; tsc 严格模式零错误
+
+### D-4 C# 壳 desktop/shell (构建成功 FabBot.exe)
+- 无边框 + Win11 圆角/Mica 材质 + macOS 交通灯窗口钮
+- sidecar 进程管理(端口探测/健康轮询/退出回收) + 托盘 + Ctrl+Alt+F 全局唤起
+
+### D-5 sidecar 打包 (PyInstaller 85MB onedir)
+- backend_runner.py: FABBOT_PORT/FABBOT_ROOT 解析, config.yaml 内嵌兜底+损坏自愈,
+  知识样例落位 data/knowledge —— 独立 exe 冒烟: health ok + kb_chunks=14
+
+### D-6 端到端 (真实运行验证)
+- 组装 dist/FabBot (壳+sidecar) → 运行 FabBot.exe → sidecar 自动拉起(kb=14) →
+  WebView2 加载 iOS 登录页 → 截图 docs/img/desktop-login.png ✓
+
+### 过程踩坑记录
+- bash heredoc 传 C#/JS 源码会截断/吃转义 → 改用 Write 工具 (第二次踩坑确认)
+- PyInstaller --add-data 目标是目录语义; onedir 打包文件有瞬时锁 → 重试
+- `build && run &` 会把构建也后台化 → 必须前台构建
+- IAB evaluate 为隔离世界 → 页面调试统一走 window.__fab 桥
