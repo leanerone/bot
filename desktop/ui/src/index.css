@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --topbar-h: 40px; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: #F2F2F7;
+  font-family: "MiSans", "HarmonyOS Sans SC", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: #1C1B1F;
+  overflow: hidden;
+}
+.dark body { background: #000000; color: #EDEDED; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(120,120,128,.35); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.ios-card { @apply bg-white dark:bg-[#1C1C1E] rounded-[16px] shadow-card border border-black/5 dark:border-white/10; }
+.ios-input { @apply w-full bg-white dark:bg-[#2C2C2E] border border-black/10 dark:border-white/10 rounded-[10px]
+  px-3 py-2 text-[14px] outline-none focus:border-[#0A84FF] transition-colors; }
+.ios-btn { @apply rounded-[10px] px-4 py-2 text-[14px] font-semibold transition-all duration-200 ease-ios active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed; }
+.ios-btn-primary { @apply ios-btn bg-[#0A84FF] text-white hover:bg-[#0A74E0]; }
+.ios-btn-ghost { @apply ios-btn bg-black/5 dark:bg-white/10 text-[#1C1B1F] dark:text-white hover:bg-black/10; }
+.ios-section-title { @apply text-[13px] font-semibold text-[rgba(60,60,67,0.6)] dark:text-[rgba(235,235,245,0.6)]
+  uppercase tracking-wide px-1 pb-2; }

@@ -1,0 +1,29 @@
+<Window x:Class="FabBot.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="Fab Bot" Width="1200" Height="800" MinWidth="900" MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None" ResizeMode="CanResize"
+        Background="#F2F2F7" AllowDrop="False">
+    <Grid>
+        <wv2:WebView2 x:Name="Web" />
+        <!-- 顶部chrome条: 交通灯 + 拖拽区 (覆盖在 WebView 上, 仅按钮与空白区可命中) -->
+        <Grid x:Name="Strip" Height="38" VerticalAlignment="Top" Background="Transparent"
+              MouseLeftButtonDown="Strip_Drag">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"
+                        HorizontalAlignment="Left">
+                <Button Style="{StaticResource TrafficBtn}" Background="#FF5F57" Content="✕"
+                        Click="BtnClose_Click" />
+                <Button Style="{StaticResource TrafficBtn}" Background="#FEBC2E" Content="–"
+                        Click="BtnMin_Click" />
+                <Button Style="{StaticResource TrafficBtn}" Background="#28C840" Content="+"
+                        Click="BtnMax_Click" />
+            </StackPanel>
+            <TextBlock x:Name="StateText" Text="正在启动后端服务…"
+                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                       Foreground="#8E8E93" FontSize="12" />
+        </Grid>
+        <Grid x:Name="LoadingMask" Background="#F2F2F7" />
+    </Grid>
+</Window>

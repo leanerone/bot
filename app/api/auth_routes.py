@@ -50,3 +50,30 @@ def logout(request: Request):
 def me(request: Request):
     user = require_user(request)
     return {"user": public_user(user)}
+
+
+class UpdateMe(BaseModel):
+    display_name: str
+
+
+class ChangePw(BaseModel):
+    old_password: str
+    new_password: str
+
+
+@router.patch("/auth/me")
+def update_me(body: UpdateMe, request: Request):
+    user = require_user(request)
+    db.update_user(user["id"], display_name=body.display_name.strip()[:30])
+    return {"ok": True}
+
+
+@router.patch("/auth/me/password")
+def change_password(body: ChangePw, request: Request):
+    user = require_user(request)
+    if len(body.new_password) < 6:
+        raise HTTPException(400, "新密码长度至少 6 位")
+    if not db.authenticate(user["username"], body.old_password):
+        raise HTTPException(400, "当前密码不正确")
+    db.set_password(user["id"], body.new_password)  # 吊销全部令牌 -> 需重新登录
+    return {"ok": True, "relogin": True}

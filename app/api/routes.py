@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
@@ -279,6 +280,33 @@ def _safe_kb_dir(path: Optional[str], default: str) -> str:
     if not str(target).startswith(str(root)):
         raise HTTPException(400, "路径越界: 只允许导入项目目录内的文档")
     return str(target)
+
+
+class UploadIn(BaseModel):
+    name: str
+    b64: str  # base64 文件内容 (拖拽上传)
+
+
+@router.post("/kb/upload")
+def kb_upload(request: Request, body: UploadIn):
+    """拖拽上传文档: base64 -> 保存到 data/knowledge -> 立即解析入库。"""
+    import base64
+    import uuid
+
+    user = require_role(request, "user")
+    name = Path(body.name).name  # 防路径穿越
+    if not name.lower().endswith((".md", ".txt", ".docx", ".pdf")):
+        raise HTTPException(400, "仅支持 .md/.txt/.docx/.pdf")
+    target_dir = abs_path(cfg("rag.knowledge_path", "data/knowledge"))
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / f"{uuid.uuid4().hex[:6]}_{name}"
+    try:
+        target.write_bytes(base64.b64decode(body.b64))
+    except Exception as exc:
+        raise HTTPException(400, f"文件内容解码失败: {exc}") from exc
+    summary = ingest_dir(str(target_dir))
+    audit_mod.record(user["username"], "/api/kb/upload", "", name, 0)
+    return {"ok": True, "saved": target.name, **summary}
 
 
 @router.post("/kb/ingest")

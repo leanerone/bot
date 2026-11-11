@@ -8,9 +8,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Optional
 
+import os
+
 import yaml
 
-ROOT = Path(__file__).resolve().parent.parent
+# PyInstaller sidecar 模式: FABBOT_ROOT 环境变量指定可写数据根目录
+ROOT = Path(os.environ.get("FABBOT_ROOT") or Path(__file__).resolve().parent.parent)
 
 
 def load_config(path: Optional[str] = None) -> dict:

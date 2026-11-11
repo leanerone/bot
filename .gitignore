@@ -16,3 +16,13 @@ Thumbs.db
 .idea/
 .vscode/
 data/app.db
+
+# 桌面端构建产物 (desktop 分支)
+desktop/ui/node_modules/
+desktop/ui/dist/
+desktop/shell/bin/
+desktop/shell/obj/
+dist/
+build/
+*.spec
+**/FabBotData/

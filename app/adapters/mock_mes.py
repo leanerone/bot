@@ -20,7 +20,9 @@ DEMO_DB = abs_path("data/demo/fab_demo.db")
 
 def seed_demo_db(db_path: Optional[Path] = None, force: bool = False) -> Path:
     db_path = Path(db_path) if db_path else DEMO_DB
-    if db_path.exists() and not force:
+    if force and db_path.exists():
+        db_path.unlink()  # 强制重种: 直接删除旧库文件, 避免表冲突
+    if db_path.exists():
         return db_path
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
@@ -117,3 +119,9 @@ class MockMESAdapter(MESAdapter):
         rows = conn.execute(sql, (f"-{hours} hours",)).fetchall()
         conn.close()
         return [dict(r) for r in rows]
+
+    def get_wip_count(self) -> int:
+        conn = sqlite3.connect(str(self.db_path))
+        n = conn.execute("SELECT COUNT(*) FROM wip").fetchone()[0]
+        conn.close()
+        return n
