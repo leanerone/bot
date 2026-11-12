@@ -46,3 +46,15 @@ def tasks_summary(request: Request):
     require_user(request)
     alarms = _adapter().get_alarms(hours=24 * 7, only_open=True)
     return {"alarms": _summarize(alarms), "wip": _adapter().get_wip_count()}
+
+
+@router.get("/alarms/since")
+def alarms_since(request: Request, after_id: int = 0, levels: str = "CRITICAL,ALARM",
+                 limit: int = 100):
+    """通知轮询: 按告警 id 游标取新增未处理告警 (时区免疫, 前端本地保存游标)。"""
+    require_user(request)
+    level_list = [x.strip().upper() for x in levels.split(",") if x.strip()]
+    alarms = _adapter().get_alarms_since(after_id=after_id, levels=level_list,
+                                         limit=min(max(limit, 1), 200))
+    last_id = alarms[-1]["id"] if alarms else after_id
+    return {"alarms": alarms, "last_id": last_id}

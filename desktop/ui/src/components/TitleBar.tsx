@@ -35,6 +35,7 @@ type Props = {
   refreshHealth: () => void;
   onLogout: () => void;
   loggedIn: boolean;
+  notif?: React.ReactNode;
 };
 
 type MenuId = "file" | "edit" | "view" | "window" | "help" | "quick";
@@ -202,6 +203,7 @@ export default function TitleBar(p: Props) {
         </div>
 
         <div className="tb-right">
+          {p.notif}
           <button className="tb-action" title="刷新界面" onClick={reload}>
             <Icon name="refresh" size={15} />
           </button>

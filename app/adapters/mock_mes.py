@@ -125,3 +125,18 @@ class MockMESAdapter(MESAdapter):
         n = conn.execute("SELECT COUNT(*) FROM wip").fetchone()[0]
         conn.close()
         return n
+
+    def get_alarms_since(self, after_id: int = 0, levels: Optional[List[str]] = None,
+                         limit: int = 100) -> List[Dict[str, Any]]:
+        """按 id 游标取新增告警 (通知轮询用), id 升序。"""
+        conn = sqlite3.connect(str(self.db_path))
+        conn.row_factory = sqlite3.Row
+        levels = levels or ["CRITICAL", "ALARM"]
+        placeholders = ",".join("?" for _ in levels)
+        rows = conn.execute(
+            f"SELECT * FROM alarms WHERE id > ? AND handled = 0 "
+            f"AND level IN ({placeholders}) ORDER BY id ASC LIMIT ?",
+            (after_id, *levels, min(limit, 200)),
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]

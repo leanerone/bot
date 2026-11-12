@@ -354,6 +354,16 @@ public partial class MainWindow : Window
     {
         var action = json.Trim().Trim('"');
 
+        // 桌面通知: toast:级别|机台|内容 (来自告警轮询)
+        if (action.StartsWith("toast:"))
+        {
+            var seg = action.Substring(6).Split('|');
+            _tray?.ShowBalloonTip(4000, $"Fab Bot · {seg[0]} {seg[1]}",
+                seg.Length > 2 ? seg[2] : "",
+                seg[0] == "CRITICAL" ? WF.ToolTipIcon.Error : WF.ToolTipIcon.Warning);
+            return;
+        }
+
         // 拖拽消息频率高，单独处理且不写日志
         if (action.StartsWith("dragStart:"))
         {

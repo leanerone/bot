@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Me, getJSON, Health, SessionMeta } from "./api";
 import Login from "./pages/Login";
+import NotificationCenter from "./components/NotificationCenter";
 import Home from "./pages/Home";
 import Chat from "./pages/Chat";
 import Knowledge from "./pages/Knowledge";
@@ -245,7 +246,8 @@ export default function App() {
     <>
       <TitleBar dark={dark} setDark={setDark} glass={glass} setGlass={setGlass}
         collapsed={collapsed} setCollapsed={setCollapsed} go={go}
-        health={health} refreshHealth={refreshHealth} onLogout={logout} loggedIn={!!me} />
+        health={health} refreshHealth={refreshHealth} onLogout={logout} loggedIn={!!me}
+        notif={<NotificationCenter go={go} enabled={!!me} />} />
       <div className="h-full">{body}</div>
       {/* 下拉渲染在侧栏之外：侧栏有 backdrop-filter + overflow:hidden，会裁剪 fixed 子元素 */}
       {brandOpen && me && <MenuPop items={brandItems} left={brandPos.left} top={brandPos.top}
