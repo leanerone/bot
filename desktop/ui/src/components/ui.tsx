@@ -3,7 +3,7 @@ import React from "react";
 /* ── iOS 风格基础组件 ── */
 
 export function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`ios-card p-4 ${className}`}>{children}</div>;
+  return <div className={`ios-card glass p-4 ${className}`}>{children}</div>;
 }
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -33,19 +33,28 @@ export function Switch({ checked, onChange }: { checked: boolean; onChange: (v: 
   );
 }
 
-export function Modal({ title, children, onClose, wide }: {
-  title: string; children: React.ReactNode; onClose: () => void; wide?: boolean;
+export function Modal({ title, children, onClose, wide, readable }: {
+  title: string; children: React.ReactNode; onClose: () => void;
+  wide?: boolean;
+  /** 信息类弹层：保留完整液态玻璃光效，同时用高不透明底色保证文字可读 */
+  readable?: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/45 flex items-center justify-center animate-[fade_.15s_ease-ios]"
+    <div className="fixed inset-0 z-[70] bg-black/45 flex items-center justify-center overflow-hidden animate-[fade_.15s_ease-ios]"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`bg-white dark:bg-[#1C1C1E] rounded-[16px] shadow-float p-6 ${wide ? "w-[720px] max-w-[92vw]" : "w-[420px] max-w-[90vw]"}
-        max-h-[80vh] overflow-auto animate-[pop_.2s_ease-ios]`}>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-[16px] font-bold">{title}</h3>
-          <button className="text-ios-label2 hover:text-current text-[18px] px-2" onClick={onClose}>✕</button>
+      {/* 外框只负责玻璃材质与圆角裁剪（overflow:hidden），滚动交给内层；
+          否则 ::before 指针高光被算进可滚动区域，会撑出上下左右滚动条。 */}
+      <div className={`modal-frame ${readable
+        ? "modal-solid glass modal-readable"
+        : "glass glass-modal bg-white dark:bg-[#1C1C1E]"} rounded-[18px] shadow-float ${wide ? "w-[720px] max-w-[92vw]" : "w-[420px] max-w-[90vw]"}
+        max-h-[80vh] flex flex-col overflow-hidden animate-[pop_.2s_ease-ios]`}>
+        <div className="modal-body relative min-h-0 flex-1 p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[16px] font-bold">{title}</h3>
+            <button className="text-ios-label2 hover:text-current text-[18px] px-2" onClick={onClose}>✕</button>
+          </div>
+          {children}
         </div>
-        {children}
       </div>
     </div>
   );
@@ -55,7 +64,7 @@ export function Segmented<T extends string>({ value, options, onChange }: {
   value: T; options: { value: T; label: string }[]; onChange: (v: T) => void;
 }) {
   return (
-    <div className="inline-flex bg-black/5 dark:bg-white/10 rounded-[9px] p-[2px]">
+    <div className="glass inline-flex bg-black/5 dark:bg-white/10 rounded-[9px] p-[2px]">
       {options.map(o => (
         <button key={o.value} onClick={() => onChange(o.value)}
           className={`px-3 py-1 text-[13px] rounded-[7px] font-medium transition-all duration-200 ease-ios

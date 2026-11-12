@@ -26,3 +26,14 @@ dist/
 build/
 *.spec
 **/FabBotData/
+
+# 本机运行时状态 / 测试产物（勿入库）
+.coverage
+htmlcov/
+*.log
+data/*.db-shm
+data/*.db-wal
+data/*.db-journal
+data/watcher_state.json
+data/notes_export/
+**/shell.log

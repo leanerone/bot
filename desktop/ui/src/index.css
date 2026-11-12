@@ -2,8 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { --topbar-h: 40px; }
-html, body, #root { height: 100%; margin: 0; }
+/* ── 统一设计 token：所有模块拼接处共用同一套尺寸 / 圆角 / 描边 ───────── */
+:root {
+  --tb-h: 40px;                 /* 网页标题栏高度（与 C# 缩放热区对齐） */
+  --sidebar-w: 228px;
+  --pad-x: 24px;
+  --r-card: 18px;               /* 卡片外圆角 */
+  --r-inner: 12px;              /* 卡片内块 / 代码块 / 侧栏小卡 */
+  --r-ctl: 10px;                /* 输入框 / 按钮 */
+  --ease-ios: cubic-bezier(.32, .72, 0, 1);
+  --hairline: rgba(60, 60, 67, .13);
+  --scroll-thumb: rgba(120, 120, 135, .26);
+  --scroll-thumb-hover: rgba(120, 120, 135, .52);
+}
+.dark {
+  --hairline: rgba(255, 255, 255, .11);
+  --scroll-thumb: rgba(235, 235, 245, .20);
+  --scroll-thumb-hover: rgba(235, 235, 245, .40);
+}
+
+html, body, #root { height: 100%; margin: 0; overflow: hidden; }
 body {
   background: #F2F2F7;
   font-family: "MiSans", "HarmonyOS Sans SC", "Segoe UI", system-ui, sans-serif;
@@ -13,15 +31,367 @@ body {
 }
 .dark body { background: #000000; color: #EDEDED; }
 
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: rgba(120,120,128,.35); border-radius: 8px; }
+/* ── 细滚动条：与玻璃主体融合 ───────────────────────────────────────── */
+* { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+::-webkit-scrollbar { width: 6px; height: 6px; background: transparent; }
 ::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  background-clip: padding-box;
+  border: 1px solid transparent;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner { background: transparent; }
 
-.ios-card { @apply bg-white dark:bg-[#1C1C1E] rounded-[16px] shadow-card border border-black/5 dark:border-white/10; }
-.ios-input { @apply w-full bg-white dark:bg-[#2C2C2E] border border-black/10 dark:border-white/10 rounded-[10px]
-  px-3 py-2 text-[14px] outline-none focus:border-[#0A84FF] transition-colors; }
-.ios-btn { @apply rounded-[10px] px-4 py-2 text-[14px] font-semibold transition-all duration-200 ease-ios active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed; }
+/* ── 统一页面容器：只有一个滚动条、宽度恒定、顶部留白一致 ─────────────── */
+.app-view {
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;             /* 根绝页面级横向滑条 */
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;       /* 滚动条出现/消失不挤动内容，缩放不左右跳 */
+  padding: calc(var(--tb-h) + 14px) calc(var(--pad-x) - 6px) 28px var(--pad-x);
+}
+/* 侧栏与内容区共用同一顶部留白，Logo 与页面标题基线对齐 */
+.app-sidebar {
+  box-sizing: border-box;
+  padding-top: calc(var(--tb-h) + 14px);
+}
+/* 内容区顶部的横向分隔：两端淡出，取代贯穿到底的硬线 */
+.header-hairline { position: relative; }
+.header-hairline::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 0, var(--hairline) 6%,
+    var(--hairline) 94%, transparent 100%);
+  pointer-events: none;
+}
+/* 页面切换：轻微入场，消除模块硬跳 */
+.view-enter {
+  position: absolute; inset: 0;
+  animation: view-in .24s var(--ease-ios) both;
+}
+/* 只做透明度淡入：transform 会为固定定位的弹层创建包含块，避免定位偏移 */
+@keyframes view-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* Chat：外层不滚动，内部两列各自滚动，避免双滚动条互相带动 */
+.app-chat { height: 100%; display: flex; overflow: hidden; }
+.app-chat > .chat-col {
+  box-sizing: border-box;
+  padding-top: calc(var(--tb-h) + 14px);
+}
+/* 自适应网格：窗口缩放时列数自动收敛，永不挤出横向滑条 */
+.grid-stat, .grid-pair, .grid-ctl { display: grid; }
+.grid-stat { gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.grid-pair { gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid-ctl  { gap: 10px; grid-template-columns: repeat(auto-fit, minmax(152px, 1fr)); }
+/* 需要横向滚动的表格 / 代码块：独立薄滚动条 */
+.scroll-x { overflow-x: auto; overflow-y: hidden; }
+
+/* ── 基础组件：统一圆角 + 裁剪内层直角块 ─────────────────────────────── */
+.ios-card {
+  @apply bg-white dark:bg-[#1C1C1E] shadow-card border border-black/5 dark:border-white/10;
+  border-radius: var(--r-card);
+  overflow: hidden;             /* 表格头 / 深色代码块不会盖住四角 */
+}
+/* 自身需要滚动的卡片（告警列表等）：保留滚动，同时仍按圆角裁剪 */
+.ios-card.overflow-y-auto { overflow-y: auto; overflow-x: hidden; }
+.ios-card.overflow-auto { overflow: auto; }
+.ios-card pre, .ios-card table { border-radius: var(--r-inner); }
+.ios-input {
+  @apply w-full bg-white dark:bg-[#2C2C2E] border border-black/10 dark:border-white/10
+    px-3 py-2 text-[14px] outline-none focus:border-[#0A84FF] transition-colors;
+  border-radius: var(--r-ctl);
+}
+.ios-btn { @apply px-4 py-2 text-[14px] font-semibold transition-all duration-200 ease-ios active:scale-95
+  disabled:opacity-40 disabled:cursor-not-allowed; border-radius: var(--r-ctl); }
 .ios-btn-primary { @apply ios-btn bg-[#0A84FF] text-white hover:bg-[#0A74E0]; }
 .ios-btn-ghost { @apply ios-btn bg-black/5 dark:bg-white/10 text-[#1C1B1F] dark:text-white hover:bg-black/10; }
 .ios-section-title { @apply text-[13px] font-semibold text-[rgba(60,60,67,0.6)] dark:text-[rgba(235,235,245,0.6)]
   uppercase tracking-wide px-1 pb-2; }
+
+/* ── 无边框窗口标题栏：与内容区连成一体，不再用硬线切断 ───────────────── */
+.titlebar {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--tb-h); z-index: 40;
+  display: flex; align-items: center; padding: 0 0 0 14px;
+  background: rgba(255, 255, 255, .40);
+  -webkit-backdrop-filter: blur(18px) saturate(155%);
+  backdrop-filter: blur(18px) saturate(155%);
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: default;
+}
+.dark .titlebar { background: rgba(28, 28, 30, .42); }
+/* 两端淡出的极细分隔线，替代原来的 1px 硬边 + 投影 */
+.titlebar::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 0, var(--hairline) 6%,
+    var(--hairline) 94%, transparent 100%);
+  pointer-events: none;
+}
+/* 应用菜单栏：左侧工具图标 + 文字菜单，品牌信息不再重复出现 */
+.tb-tools { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+.tb-tools-sep { width: 1px; height: 16px; margin: 0 10px; background: var(--hairline); }
+.tb-icon {
+  width: 26px; height: 26px; border: 0; padding: 0; border-radius: 7px;
+  background: transparent; color: #5B5B62; display: grid; place-items: center;
+  cursor: default; transition: background .14s ease, color .14s ease;
+}
+.tb-icon:hover { background: rgba(0, 0, 0, .07); color: #1C1B1F; }
+.dark .tb-icon { color: #AEAEB4; }
+.dark .tb-icon:hover { background: rgba(255, 255, 255, .1); color: #FFF; }
+.tb-menus { display: flex; align-items: center; gap: 1px; min-width: 0; }
+.tb-menu-btn {
+  height: 26px; padding: 0 9px; border: 0; border-radius: 7px;
+  background: transparent; color: #3C3C43; font-size: 12px; font-weight: 500;
+  white-space: nowrap; cursor: default;
+  transition: background .14s ease, color .14s ease;
+}
+.tb-menu-btn:hover, .tb-menu-btn.is-open { background: rgba(0, 0, 0, .075); color: #111114; }
+.dark .tb-menu-btn { color: #D8D8DE; }
+.dark .tb-menu-btn:hover, .dark .tb-menu-btn.is-open { background: rgba(255, 255, 255, .11); color: #FFF; }
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 4px; padding-right: 6px; }
+.tb-action {
+  width: 26px; height: 26px; border: 0; padding: 0; border-radius: 7px;
+  background: transparent; color: #8E8E93; font-size: 14px; line-height: 1;
+  display: grid; place-items: center;
+  cursor: default; transition: background .15s ease, color .15s ease;
+}
+.tb-action:hover { background: rgba(0, 0, 0, .07); color: #1C1B1F; }
+.dark .tb-action:hover { background: rgba(255, 255, 255, .1); color: #FFF; }
+.tb-divider { width: 1px; height: 17px; margin: 0 5px; background: var(--hairline); }
+.tb-win {
+  width: 42px; height: var(--tb-h); border: 0; padding: 0; border-radius: 0;
+  background: transparent; color: #4A4A50; font-size: 13px; line-height: 1;
+  cursor: default; transition: background .12s ease, color .12s ease;
+}
+.dark .tb-win { color: #D0D0D4; }
+.tb-win:hover { background: rgba(0, 0, 0, .07); }
+.dark .tb-win:hover { background: rgba(255, 255, 255, .1); }
+.tb-win-close:hover { background: #E81123; color: #FFF; }
+.tb-badge {
+  font-size: 10.5px; color: #8E8E93; padding: 3px 8px;
+  border: 1px solid var(--hairline); border-radius: 6px; white-space: nowrap;
+}
+
+/* ── 模块之间的渐变分隔：上下淡出，不再是一条贯穿到底的硬直线 ─────────── */
+.edge-divider {
+  position: absolute; top: calc(var(--tb-h) + 6px); bottom: 12px; right: 0;
+  width: 1px; pointer-events: none;
+  background: linear-gradient(to bottom, transparent 0, var(--hairline) 10%,
+    var(--hairline) 90%, transparent 100%);
+}
+
+/* ── 窗口边缘 / 四角缩放热区（仅桌面壳内） ───────────────────────────── */
+.resize-layer { position: fixed; inset: 0; z-index: 45; pointer-events: none; }
+.resize-layer > div { position: absolute; pointer-events: auto; }
+/* 顶部热区避开右上角窗口按钮，保证 — ▢ ✕ 全区域可点 */
+.rs-top    { top: 0; left: 10px; right: 150px; height: 5px; cursor: ns-resize; }
+.rs-bottom { bottom: 0; left: 10px; right: 10px; height: 6px; cursor: ns-resize; }
+.rs-left   { left: 0; top: 10px; bottom: 10px; width: 5px; cursor: ew-resize; }
+.rs-right  { right: 0; top: 10px; bottom: 10px; width: 6px; cursor: ew-resize; }
+.rs-tl { top: 0; left: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+.rs-bl { bottom: 0; left: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+.rs-br { bottom: 0; right: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+
+/* ── 桌面壳内：像原生 App 一样禁止整页框选 / 拖选 / 图片拖拽 ─────────── */
+html[data-desktop="1"] body,
+html[data-desktop="1"] body * {
+  -webkit-user-select: none; user-select: none;
+  -webkit-user-drag: none; -webkit-tap-highlight-color: transparent;
+}
+html[data-desktop="1"] input,
+html[data-desktop="1"] textarea,
+html[data-desktop="1"] [contenteditable="true"],
+html[data-desktop="1"] .selectable,
+html[data-desktop="1"] .selectable * {
+  -webkit-user-select: text; user-select: text;
+}
+
+/* ── 应用菜单下拉面板 ─────────────────────────────────────────────────── */
+.menu-pop {
+  position: fixed; z-index: 60; padding: 6px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .90);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, .72);
+  box-shadow: 0 14px 38px rgba(16, 28, 56, .18), 0 1px 3px rgba(16, 28, 56, .08);
+  -webkit-user-select: none; user-select: none;
+  animation: menu-in .14s var(--ease-ios) both;
+}
+.dark .menu-pop {
+  background: rgba(38, 38, 42, .92);
+  border-color: rgba(255, 255, 255, .12);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, .5);
+}
+/* 玻璃「关闭」档要真的关掉：菜单原本自带 blur，这里显式摘除 */
+html[data-glass="off"] .menu-pop {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: rgba(255, 255, 255, .96);
+}
+html[data-glass="off"].dark .menu-pop { background: rgba(38, 38, 42, .96); }
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+.menu-item {
+  display: flex; align-items: center; gap: 9px; width: 100%; height: 30px;
+  padding: 0 9px; border: 0; border-radius: 7px; background: transparent;
+  color: inherit; font-size: 12.5px; text-align: left; cursor: default;
+  transition: background .12s ease, color .12s ease;
+}
+.menu-item:hover:not(:disabled) { background: rgba(10, 132, 255, .12); color: #0A84FF; }
+.menu-item:disabled { opacity: .58; cursor: default; }
+.menu-item.is-danger:hover:not(:disabled) { background: rgba(255, 69, 58, .12); color: #FF453A; }
+.menu-ic { width: 16px; flex: 0 0 16px; display: grid; place-items: center; color: #0A84FF; }
+.menu-label { flex: 1; white-space: nowrap; }
+.menu-hint { font-size: 11px; color: #6E6E76; white-space: nowrap; }
+.dark .menu-hint { color: #AEAEB4; }
+.menu-sep { height: 1px; margin: 5px 6px; background: var(--hairline); }
+
+/* ── 侧栏：品牌区（品牌只出现一次） ───────────────────────────────────── */
+.side-brand { display: flex; align-items: center; gap: 10px; padding: 0 12px 18px; }
+.side-brand.is-collapsed { justify-content: center; padding: 0 0 18px; }
+/* 品牌位直接使用应用图标（自带圆角与玻璃高光），不再叠渐变底色 */
+.brand-mark {
+  width: 32px; height: 32px; flex: 0 0 32px; border-radius: 9px;
+  display: block; object-fit: contain;
+  box-shadow: 0 3px 10px rgba(6, 32, 72, .22);
+}
+.brand-txt { flex: 1; min-width: 0; }
+.brand-name { font-size: 16px; font-weight: 700; letter-spacing: -.2px; line-height: 1.2; }
+.brand-sub {
+  margin-top: 3px; font-size: 10px; letter-spacing: -.2px; color: #8E8E93;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.brand-pill {
+  display: flex; align-items: center; gap: 2px; flex: 0 0 auto;
+  height: 22px; padding: 0 6px; border: 1px solid var(--hairline);
+  border-radius: 7px; background: rgba(255, 255, 255, .55);
+  color: #5B5B62; font-size: 10.5px; cursor: default;
+  transition: background .14s ease, color .14s ease;
+}
+.brand-pill:hover { background: rgba(10, 132, 255, .10); color: #0A84FF; }
+.dark .brand-pill { background: rgba(255, 255, 255, .07); color: #C7C7CC; }
+
+/* ── 侧栏：分组导航 ───────────────────────────────────────────────────── */
+.side-scroll { flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 0 10px; }
+.nav-block { display: flex; flex-direction: column; gap: 2px; }
+.nav-group { display: flex; flex-direction: column; gap: 2px; margin-top: 18px; }
+.nav-group-title {
+  padding: 0 8px 6px; font-size: 11px; font-weight: 600;
+  letter-spacing: .3px; color: #8E8E93;
+}
+.nav-group-title span { color: #AEAEB2; font-weight: 500; }
+.nav-item {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  width: 100%; height: 34px; padding: 0 10px; border: 0; border-radius: 9px;
+  background: transparent; color: #3C3C43; font-size: 13.5px; font-weight: 500;
+  text-align: left; cursor: default;
+  transition: background .15s ease, color .15s ease;
+}
+.dark .nav-item { color: #D8D8DE; }
+.nav-ic { width: 18px; height: 18px; flex: 0 0 18px; display: grid; place-items: center; color: #7A7A82; }
+.nav-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav-item:hover { background: rgba(0, 0, 0, .05); }
+.dark .nav-item:hover { background: rgba(255, 255, 255, .08); }
+.nav-item.is-active { background: rgba(10, 132, 255, .11); color: #0A84FF; font-weight: 600; }
+.nav-item.is-active .nav-ic { color: #0A84FF; }
+.nav-item.is-active::before {
+  content: ""; position: absolute; left: 0; top: 9px; bottom: 9px;
+  width: 3px; border-radius: 2px; background: #0A84FF;
+}
+.app-sidebar.is-collapsed .nav-item,
+.app-sidebar.is-collapsed .nav-recent { justify-content: center; padding: 0; }
+.app-sidebar.is-collapsed .nav-item.is-active::before { top: 8px; bottom: 8px; }
+.nav-empty { padding: 3px 10px; font-size: 11.5px; color: #AEAEB2; }
+.nav-recent {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: 30px;
+  padding: 0 10px; border: 0; border-radius: 8px; background: transparent;
+  color: #6B6B72; font-size: 12px; text-align: left; cursor: default;
+  transition: background .14s ease, color .14s ease;
+}
+.dark .nav-recent { color: #AEAEB4; }
+.nav-recent svg { flex: 0 0 14px; color: #A0A0A8; }
+.nav-recent:hover { background: rgba(0, 0, 0, .05); color: #1C1B1F; }
+.dark .nav-recent:hover { background: rgba(255, 255, 255, .08); color: #FFF; }
+
+/* ── 侧栏：账号区 ─────────────────────────────────────────────────────── */
+.side-user {
+  display: flex; align-items: center; gap: 9px; margin: 0 12px 14px;
+  padding: 8px 9px; border-radius: 11px; background: rgba(0, 0, 0, .035);
+}
+.dark .side-user { background: rgba(255, 255, 255, .06); }
+.side-user.is-collapsed { justify-content: center; margin: 0 10px 14px; padding: 8px 0; }
+.user-avatar {
+  width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%;
+  display: grid; place-items: center; color: #FFF; font-size: 12px; font-weight: 700;
+  background: linear-gradient(140deg, #0A84FF, #5B6CFF);
+}
+.user-txt { flex: 1; min-width: 0; }
+.user-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-role { font-size: 10.5px; color: #8E8E93; }
+.user-logout {
+  width: 24px; height: 24px; flex: 0 0 24px; border: 0; border-radius: 6px;
+  display: grid; place-items: center; background: transparent; color: #8E8E93; cursor: default;
+}
+.user-logout:hover { background: rgba(255, 69, 58, .12); color: #FF453A; }
+
+/* ── 关于 / 登录共用 ──────────────────────────────────────────────────── */
+.about-mark, .login-mark {
+  width: 52px; height: 52px; margin: 2px auto 10px; border-radius: 15px;
+  display: block; object-fit: contain;
+  box-shadow: 0 6px 18px rgba(6, 32, 72, .20);
+}
+.login-mark { margin-bottom: 14px; }
+/* 弹层滚动统一放在内层：外框只做圆角裁剪，避免玻璃高光伪元素被算进
+   可滚动区域（完整玻璃模式下曾因此出现上下左右滚动条、弹层被拉长）。
+   稳定滚动槽 + 禁止横向滚动，内容再长也只在内部出现一条细竖向滚动条。 */
+.modal-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+/* 信息弹层（关于 / 快捷键）的「可读性底板」：
+   液态玻璃关闭时是这张纯色卡片；开启时由 liquid-glass.css 的 .modal-readable
+   覆盖为高不透明玻璃（保留 blur / 虹彩 / 高光），两种模式都保证文字对比度。 */
+.modal-solid {
+  background: #FFFFFF;
+  border: 1px solid var(--hairline);
+  box-shadow: 0 18px 50px rgba(16, 28, 56, .22);
+  color: #1C1B1F;
+}
+.dark .modal-solid {
+  background: #1F1F22;
+  border-color: rgba(255, 255, 255, .14);
+  color: #EDEDED;
+}
+.modal-solid .ios-btn-ghost {
+  background: rgba(0, 0, 0, .06);
+  border: 1px solid var(--hairline);
+  color: #1C1B1F;
+}
+.dark .modal-solid .ios-btn-ghost { background: rgba(255, 255, 255, .10); color: #FFF; }
+.about-name { text-align: center; font-size: 18px; font-weight: 700; }
+.about-sub { text-align: center; font-size: 13px; color: #5B5B62; margin-top: 4px; }
+.dark .about-sub { color: #AEAEB4; }
+.about-rows { margin-top: 18px; border-top: 1px solid var(--hairline); }
+.about-rows > div {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  padding: 11px 2px; border-bottom: 1px solid var(--hairline);
+  font-size: 13.5px; line-height: 1.5;
+}
+.about-rows span { color: #5B5B62; flex: 0 0 auto; font-weight: 500; }
+.dark .about-rows span { color: #B4B4BC; }
+.about-rows b { font-weight: 600; text-align: right; word-break: break-all; color: #111114; }
+.dark .about-rows b { color: #FFFFFF; }

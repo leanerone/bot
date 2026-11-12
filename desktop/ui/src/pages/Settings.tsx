@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 import { Me, Health, patchJSON } from "../api";
-import { BigTitle, Card, SectionTitle, Switch } from "../components/ui";
+import { BigTitle, Card, SectionTitle, Switch, Segmented } from "../components/ui";
 
-export default function Settings({ me, health, dark, setDark, refreshHealth }: {
-  me: Me; health: Health | null; dark: boolean; setDark: (v: boolean) => void; refreshHealth: () => void;
+type GlassMode = "off" | "eco" | "on";
+
+export default function Settings({ me, health, dark, setDark, glass, setGlass, refreshHealth }: {
+  me: Me; health: Health | null; dark: boolean; setDark: (v: boolean) => void;
+  glass: GlassMode; setGlass: (v: GlassMode) => void; refreshHealth: () => void;
 }) {
   const [oldPw, setOldPw] = useState(""); const [newPw, setNewPw] = useState("");
   const [msg, setMsg] = useState("");
@@ -21,7 +24,7 @@ export default function Settings({ me, health, dark, setDark, refreshHealth }: {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-6 pt-[46px] pb-6 max-w-[720px]">
+    <div className="app-view"><div className="max-w-[720px]">
       <BigTitle sub="账号、外观与服务状态">设置</BigTitle>
 
       <SectionTitle>外观</SectionTitle>
@@ -29,6 +32,17 @@ export default function Settings({ me, health, dark, setDark, refreshHealth }: {
         <div><div className="font-semibold text-[14.5px]">深色模式</div>
           <div className="text-[12px] text-ios-label2">跟随切换，立即生效</div></div>
         <Switch checked={dark} onChange={setDark} />
+      </Card>
+      <Card className="mb-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div><div className="font-semibold text-[14.5px]">液态玻璃材质</div>
+            <div className="text-[12px] text-ios-label2 mt-0.5">虹彩边缘、动态光斑与光照跟随；省电模式保留静态材质</div></div>
+          <Segmented value={glass} onChange={setGlass} options={[
+            { value: "off", label: "关闭" },
+            { value: "eco", label: "省电" },
+            { value: "on", label: "完整" },
+          ]} />
+        </div>
       </Card>
 
       <SectionTitle>账号</SectionTitle>
@@ -71,6 +85,6 @@ export default function Settings({ me, health, dark, setDark, refreshHealth }: {
       <div className="text-[11.5px] text-ios-label2 px-1 leading-5">
         数据安全：全部服务运行在工厂内网，生产数据经只读中间库接入，问答与查询全程留痕审计。
       </div>
-    </div>
+    </div></div>
   );
 }

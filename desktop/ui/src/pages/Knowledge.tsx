@@ -53,7 +53,7 @@ export default function Knowledge({ me }: { me: Me }) {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-6 pt-[46px] pb-6">
+    <div className="app-view">
       <BigTitle sub="SOP / 手册 / HCL Notes 导出的统一入口，导入即检索">知识库</BigTitle>
 
       <div className={`rounded-[16px] border-2 border-dashed p-8 text-center transition-colors
@@ -67,14 +67,14 @@ export default function Knowledge({ me }: { me: Me }) {
         {busy && <div className="mt-3 grid place-items-center"><Spinner text={busy + "…"} /></div>}
       </div>
 
-      <div className="grid grid-cols-4 gap-2.5 my-4">
+      <div className="grid-ctl my-4">
         <button className="ios-btn-primary py-2" disabled={!!busy} onClick={ingest}>导入常规文档</button>
         <button className="ios-btn-primary py-2" disabled={!!busy} onClick={ingestNotes}>导入 Notes 导出</button>
         <button className="ios-btn-ghost py-2" onClick={refresh}>刷新统计</button>
         {admin && <button className="ios-btn-ghost py-2 !text-[#FF453A]" disabled={!!busy} onClick={rebuild}>全量重建</button>}
       </div>
 
-      {result && <pre className="bg-black/[.03] dark:bg-white/[.05] rounded-[12px] p-3.5 text-[12px] overflow-auto max-h-[200px] mb-4">{result}</pre>}
+      {result && <pre className="selectable bg-black/[.03] dark:bg-white/[.05] rounded-[12px] p-3.5 text-[12px] overflow-auto max-h-[200px] mb-4">{result}</pre>}
 
       <div className="ios-section-title">来源清单 {kbChunks !== null && `· 共 ${kbChunks} 片段`}</div>
       <Card className="overflow-hidden p-0">

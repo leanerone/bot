@@ -29,7 +29,7 @@ export default function Tasks({ me }: { me: Me }) {
   const maxEqp = data ? Math.max(1, ...data.by_eqp.map(x => x[1])) : 1;
 
   return (
-    <div className="h-full overflow-y-auto px-6 pt-[46px] pb-6">
+    <div className="app-view">
       <BigTitle sub="未处理告警实时面板 —— 数据来自只读中间库">任务中心 · 告警值守</BigTitle>
 
       <div className="flex items-center gap-2 mb-4">
@@ -45,14 +45,14 @@ export default function Tasks({ me }: { me: Me }) {
 
       {loading && !data ? <Spinner text="加载告警数据…" /> : data && (
         <>
-          <div className="grid grid-cols-4 gap-3 mb-4">
+          <div className="grid-stat mb-4">
             <StatCard value={data.summary.total} label="未处理总数" tone={data.summary.total ? "red" : "green"} />
             <StatCard value={data.summary.critical} label="CRITICAL" tone="red" />
             <StatCard value={data.summary.alarm} label="ALARM" tone="orange" />
             <StatCard value={data.summary.warn} label="WARN" tone="neutral" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid-pair">
             <div>
               <div className="ios-section-title">机台分布 Top {data.by_eqp.length}</div>
               <Card className="space-y-2.5">

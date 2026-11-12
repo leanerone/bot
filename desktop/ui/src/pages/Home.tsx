@@ -19,12 +19,12 @@ export default function Home({ me, health, go }: { me: Me; health: Health | null
   ];
 
   return (
-    <div className="h-full overflow-y-auto px-6 pt-[46px] pb-6">
+    <div className="app-view">
       <BigTitle sub={`你好，${me.display_name || me.username} · ${new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" })}`}>
         工作台
       </BigTitle>
 
-      <div className="grid grid-cols-4 gap-3 mb-5">
+      <div className="grid-stat mb-5">
         <StatCard value={summary ? summary.alarms.total : "–"} label="未处理告警" tone={summary && summary.alarms.total > 0 ? "red" : "green"} />
         <StatCard value={summary ? summary.alarms.critical : "–"} label="其中 CRITICAL" tone="red" />
         <StatCard value={health ? health.kb_chunks : "–"} label="知识库片段" tone="blue" />
@@ -32,10 +32,10 @@ export default function Home({ me, health, go }: { me: Me; health: Health | null
       </div>
 
       <div className="ios-section-title">快速开始</div>
-      <div className="grid grid-cols-2 gap-3 mb-5">
+      <div className="grid-pair mb-5">
         {quick.map(q => (
           <button key={q.label} onClick={() => go(q.view)}
-            className="ios-card p-4 text-left hover:scale-[1.01] active:scale-[.99] transition-transform duration-200 ease-ios">
+            className="ios-card p-4 text-left active:scale-[.99] transition-transform duration-200 ease-ios">
             <div className="flex items-center gap-3">
               <span className="text-[24px]">{q.icon}</span>
               <div>

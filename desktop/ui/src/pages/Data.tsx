@@ -20,7 +20,7 @@ export default function Data({ me }: { me: Me }) {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-6 pt-[46px] pb-6">
+    <div className="app-view">
       <BigTitle sub="自然语言查生产数据 —— 只读安全，返回 SQL 与结果">数据台</BigTitle>
       <Card className="mb-4">
         <div className="flex gap-2">
@@ -50,9 +50,9 @@ export default function Data({ me }: { me: Me }) {
               <button className="text-[12px] text-ios-label2 hover:text-current"
                 onClick={() => navigator.clipboard.writeText(result.sql)}>复制</button>
             </div>
-            <pre className="bg-[#10161F] text-[#D8E2EF] rounded-[10px] p-3.5 text-[12.5px] overflow-x-auto">{result.sql}</pre>
+            <pre className="selectable bg-[#10161F] text-[#D8E2EF] rounded-[10px] p-3.5 text-[12.5px] overflow-x-auto">{result.sql}</pre>
           </Card>
-          <Card className="p-0 overflow-hidden mb-4">
+          <Card className="selectable p-0 overflow-hidden mb-4">
             <div className="px-4 py-2.5 border-b border-black/5 dark:border-white/5 text-[13px] font-semibold">
               查询结果 · {result.row_count} 行
             </div>

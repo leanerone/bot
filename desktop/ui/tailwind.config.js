@@ -25,10 +25,12 @@ export default {
       fontFamily: {
         sans: ['"MiSans"', '"HarmonyOS Sans SC"', '"Segoe UI"', 'system-ui', 'sans-serif'],
       },
-      borderRadius: { card: "16px", win: "10px" },
+      borderRadius: { card: "16px", win: "10px", glass: "20px" },
+      backdropBlur: { glass: "26px", sidebar: "34px" },
       boxShadow: {
         card: "0 1px 3px rgba(20,30,50,.06), 0 4px 16px rgba(20,30,50,.05)",
         float: "0 12px 48px rgba(10,20,40,.22)",
+        glass: "0 10px 34px rgba(16,28,56,.13), inset 0 1px 0 rgba(255,255,255,.9)",
       },
       transitionTimingFunction: { ios: "cubic-bezier(0.32,0.72,0,1)" },
     },

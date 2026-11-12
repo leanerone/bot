@@ -19,14 +19,15 @@ export default function Login({ onLogin }: { onLogin: (u: Me) => void }) {
     } finally { setBusy(false); }
   };
 
+  // 背景直接透出 body 光场，登录 → 主界面不再从实色跳到玻璃
   return (
-    <div className="h-full grid place-items-center bg-ios-bg dark:bg-black">
+    <div className="h-full grid place-items-center">
       <form onSubmit={submit}
-        className="w-[360px] bg-white/80 dark:bg-[#1C1C1E]/90 backdrop-blur-2xl rounded-[20px] shadow-float p-8">
+        className="w-[360px] bg-white/80 dark:bg-[#1C1C1E]/90 backdrop-blur-2xl rounded-[18px] shadow-float p-8">
         <div className="text-center mb-6">
-          <div className="text-[40px] leading-none mb-2">⚙️</div>
+          <img className="login-mark" src="/brand.png" alt="Fab Bot" />
           <div className="text-[20px] font-bold">Fab Bot</div>
-          <div className="text-[12.5px] text-ios-label2 mt-1">半导体工厂智能助手 · 登录</div>
+          <div className="text-[12.5px] text-ios-label2 mt-1">半导体工厂 AI 助手 · 内网桌面版</div>
         </div>
         <div className="text-[12px] text-[#FF453A] min-h-[18px] mb-1">{err}</div>
         <input className="ios-input mb-3" placeholder="用户名" value={username}

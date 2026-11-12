@@ -4,15 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fab Bot</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="alternate icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/brand.png">
 <style>
   html,body{margin:0;height:100%;background:transparent}
-  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;
     font-family:"MiSans","HarmonyOS Sans SC",system-ui,sans-serif;color:#8E8E93;font-size:13px;
-    background:#F2F2F7}
+    background:linear-gradient(145deg,#eef2fb,#f7f2fa 52%,#eaf6f4)}
+  #boot img{width:34px;height:34px;filter:drop-shadow(0 3px 9px rgba(6,32,72,.20))}
 </style>
 </head>
 <body>
-<div id="boot">正在启动 Fab Bot…</div>
+<div id="boot"><img src="/brand.png" alt="">正在启动 Fab Bot…</div>
 <div id="root"></div>
 <script type="module" src="/src/main.tsx"></script>
 </body>

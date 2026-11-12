@@ -9,10 +9,15 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>FabBot</AssemblyName>
     <Version>4.2.0</Version>
+    <!-- exe 资源管理器图标 / 任务栏图标 -->
+    <ApplicationIcon>Assets\fabbot.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <!-- 嵌入程序集: WPF 窗口 Icon、托盘图标与启动画面均从 pack URI 读取, 绿色版无需额外文件 -->
+    <Resource Include="Assets\fabbot.ico" />
+    <Resource Include="Assets\fabbot.png" />
   </ItemGroup>
 
 </Project>

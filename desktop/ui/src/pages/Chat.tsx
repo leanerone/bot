@@ -4,7 +4,7 @@ import { Modal } from "../components/ui";
 
 const CHIPS = ["最近未处理的告警有哪些", "射频功率漂移怎么处理", "ETCH 区几台机台是 DOWN 的", "P1234 最近一周良率"];
 
-export default function Chat({ me }: { me: Me }) {
+export default function Chat({ me, initialSession }: { me: Me; initialSession?: string | null }) {
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -13,6 +13,7 @@ export default function Chat({ me }: { me: Me }) {
   const [srcModal, setSrcModal] = useState<{ title: string; text: string } | null>(null);
   const [search, setSearch] = useState("");
   const abortRef = useRef<AbortController | null>(null);
+  const firstRun = useRef(true);
 
   const refresh = async () => {
     const r = await getJSON<{ sessions: SessionMeta[] }>("/api/sessions");
@@ -22,7 +23,14 @@ export default function Chat({ me }: { me: Me }) {
     });
     setSessions(mapped as any);
   };
-  useEffect(() => { refresh(); }, []);
+  // 从侧栏「最近会话」进入时，先拉会话列表再打开目标会话，避免列表覆盖已加载的消息
+  useEffect(() => {
+    refresh().then(() => initialSession ? openSession(initialSession) : undefined).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    if (initialSession) openSession(initialSession).catch(() => {});
+  }, [initialSession]);
 
   const openSession = async (id: string, beforeId?: number) => {
     if (generating) return;
@@ -145,10 +153,11 @@ export default function Chat({ me }: { me: Me }) {
   useEffect(() => { const el = scrollRef.current; if (el) el.scrollTop = el.scrollHeight; }, [messages.length, generating]);
 
   return (
-    <div className="h-full flex">
+    <div className="app-chat">
       {/* 会话列表 */}
-      <div className="w-[240px] shrink-0 border-r border-black/10 dark:border-white/10 flex flex-col bg-black/[.02] dark:bg-white/[.03]">
-        <div className="pt-[46px] px-3 pb-2">
+      <div className="chat-col relative w-[240px] shrink-0 flex flex-col bg-black/[.02] dark:bg-white/[.03]">
+        <span className="edge-divider" aria-hidden />
+        <div className="px-3 pb-2">
           <input className="ios-input !py-1.5 text-[13px]" placeholder="搜索会话…" value={search}
             onChange={e => setSearch(e.target.value)} />
           <button className="ios-btn-primary w-full mt-2 py-1.5 text-[13px]"
@@ -173,8 +182,8 @@ export default function Chat({ me }: { me: Me }) {
       </div>
 
       {/* 对话区 */}
-      <div className="flex-1 min-w-0 flex flex-col">
-        <div className="pt-[46px] px-5 pb-2 border-b border-black/10 dark:border-white/10 flex items-center">
+      <div className="chat-col flex-1 min-w-0 flex flex-col">
+        <div className="px-5 pb-2 header-hairline flex items-center">
           <div className="font-semibold text-[15px]">{cur?.title || "新会话"}</div>
           {cur && <button className="ml-auto text-[12px] text-ios-label2 hover:text-current"
             onClick={() => exportMd(cur)}>导出 Markdown</button>}
@@ -186,10 +195,10 @@ export default function Chat({ me }: { me: Me }) {
                 <div className="text-[42px] mb-2">💬</div>
                 <div className="text-[18px] font-bold mb-1">AI 对话</div>
                 <div className="text-[13px] text-ios-label2 mb-6">知识问答附引用来源 · 数据查询只读安全</div>
-                <div className="grid grid-cols-2 gap-2 w-[440px]">
+                <div className="grid grid-cols-2 gap-2 w-full max-w-[440px] min-w-0">
                   {CHIPS.map(c => (
                     <button key={c} onClick={() => { setInput(c); setTimeout(send, 0); }}
-                      className="ios-card px-3 py-2.5 text-[13px] text-left hover:scale-[1.01] transition-transform">{c}</button>
+                      className="ios-card px-3 py-2.5 text-[13px] text-left transition-colors">{c}</button>
                   ))}
                 </div>
               </div>
@@ -219,7 +228,7 @@ export default function Chat({ me }: { me: Me }) {
           </div>
         </div>
         {srcModal && <Modal title={srcModal.title} onClose={() => setSrcModal(null)} wide>
-          <pre className="whitespace-pre-wrap text-[13.5px] leading-6 bg-black/[.03] dark:bg-white/[.05] rounded-[10px] p-3.5">{srcModal.text}</pre>
+          <pre className="selectable whitespace-pre-wrap text-[13.5px] leading-6 bg-black/[.03] dark:bg-white/[.05] rounded-[10px] p-3.5">{srcModal.text}</pre>
         </Modal>
         }
       </div>
@@ -256,11 +265,11 @@ function mdToHtml(src: string) {
 
 function Message({ m, onRate, onSrc }: { m: ChatMsg; onRate: (id: any, v: string) => void; onSrc: (t: string, x: string) => void }) {
   if (m.role === "user")
-    return <div className="flex justify-end mb-3"><div className="bg-[#0A84FF] text-white max-w-[72%] px-4 py-2.5
+    return <div className="flex justify-end mb-3"><div className="selectable bg-[#0A84FF] text-white max-w-[72%] px-4 py-2.5
       rounded-[16px] rounded-br-[4px] text-[14px] leading-6 whitespace-pre-wrap">{m.text}</div></div>;
   return (
     <div className="mb-4">
-      <div className={`ios-card px-4 py-3.5 text-[14px] leading-6 ${m.error ? "border-[#FF453A]/40 bg-[#FF453A]/5" : ""}`}>
+      <div className={`selectable ios-card px-4 py-3.5 text-[14px] leading-6 ${m.error ? "border-[#FF453A]/40 bg-[#FF453A]/5" : ""}`}>
         {m.type === "sql" ? (
           <>
             <pre className="bg-[#10161F] text-[#D8E2EF] rounded-[9px] p-3 text-[12.5px] overflow-x-auto">{esc(m.sql || m.text)}</pre>
@@ -303,7 +312,7 @@ function Message({ m, onRate, onSrc }: { m: ChatMsg; onRate: (id: any, v: string
 function ResultTable({ cols, rows }: { cols: string[]; rows: any[][] }) {
   if (!cols.length) return null;
   return (
-    <div className="overflow-x-auto mt-2">
+    <div className="selectable overflow-x-auto mt-2">
       <table className="w-full text-[12.8px] border-collapse">
         <thead><tr>{cols.map(c => <th key={c} className="bg-[#FF9500] text-white text-left px-2.5 py-1.5 font-semibold">{c}</th>)}</tr></thead>
         <tbody>{rows.slice(0, 50).map((r, i) => (
