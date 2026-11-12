@@ -234,3 +234,35 @@
 - PyInstaller --add-data 目标是目录语义; onedir 打包文件有瞬时锁 → 重试
 - `build && run &` 会把构建也后台化 → 必须前台构建
 - IAB evaluate 为隔离世界 → 页面调试统一走 window.__fab 桥
+
+## 🖥️ v4.3 Hub 阶段 (2026-11-13, fabai-hub 分支)
+
+### T1~T4 (00:13 推送)
+- HUB_ROADMAP.md 推进总结 + SKILL_SPEC.md 插件规范 v0.1 + 三个官方 skill (text2sql/rag/alarm-watch)
+- skill 注册表 (frontmatter 校验/发现接口 /api/skills) + **MCP Server** (rag_search/text2sql_query/alarms_open/watcher_summary, stdio+http, 冒烟通过)
+- 依赖对齐: fastapi 0.162 / starlette 1.10 / mcp 1.30 (pin <2)
+
+### T5 通知闭环 (00:18)
+- GET /api/tasks/alarms/since (id 游标, 时区免疫) + adapter.get_alarms_since
+- 前端 useAlarms 轮询 hook (60s/首次只同步游标/前台才气泡) + NotificationCenter (铃铛/红点/面板/横幅)
+- C# OnWebMessage 加 toast: 动作 → 托盘气泡 (CRITICAL=Error 图标)
+
+### T6 图表 (00:31)
+- /api/data/charts/yield-trend + alarm-by-day (免 LLM 聚合端点)
+- recharts DataChart + detectChart 智能切图 (日期列→折线/单值列→柱状) + 数据台预置图表卡
+
+### T7 任务深化 (00:31)
+- tasks 表 (SQLite) + CRUD API (归属校验) + 交班报告 (聚合纯函数 build_shift_report + MD 产出)
+- Tasks 页: 我的任务 (增删/完成/逾期) + 报告生成弹层 (渲染+复制+导出MD)
+
+### T8 设置整合 (00:34)
+- admin config 白名单读写 API (GET 打码/PUT 原子+备份 config.yaml.bak)
+- 设置页: Mock开关/top_k/值守间隔与开关 (admin) + 玻璃三档进外观
+
+### T9 打包固化 (00:36)
+- desktop-package.ps1 一键打包 (npm ci → PyInstaller → dotnet publish → 组装 → 冒烟)
+- ui_dist 入 PyInstaller + main.py 冻结布局回退 (修复 SPA 冻结后 404)
+- csproj 图标 + Version 4.3.0
+
+### 门禁
+- 当轮 check_all exit=0 → 批量守夜循环启动 (H-GATE1~11, 每30分钟至 06:00)
