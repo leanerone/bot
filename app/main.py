@@ -17,6 +17,7 @@ from app.api import admin as admin_api
 from app.api import auth_routes
 from app.api.routes import router
 from app.api.tasks import router as tasks_router
+from app.api.skillhub import router as skillhub_router
 from app.config import ROOT, abs_path, cfg
 from app.rag.ingest import get_store, ingest_dir
 from app.store import db
@@ -66,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(router)
     app.include_router(admin_api.router)
     app.include_router(tasks_router)
+    app.include_router(skillhub_router)
 
     # 桌面前端 (React 构建产物) 存在时, 由后端托管 —— 与 API 同源, Cookie 免跨域
     dist = ROOT / "desktop" / "ui" / "dist"
