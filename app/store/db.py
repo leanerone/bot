@@ -69,6 +69,18 @@ CREATE TABLE IF NOT EXISTS audit(
   ms INTEGER DEFAULT 0,
   status TEXT DEFAULT 'ok'
 );
+CREATE TABLE IF NOT EXISTS tasks(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  detail TEXT DEFAULT '',
+  kind TEXT DEFAULT 'followup',
+  status TEXT DEFAULT 'open',
+  due_at TEXT,
+  created_at TEXT NOT NULL,
+  done_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks(user_id);
 """
 
 
@@ -446,6 +458,86 @@ def list_audit(limit: int = 200, user: Optional[str] = None) -> List[Dict[str, A
 
 
 # ── 统计 ──
+
+# ── 任务 (v4.3) ──
+
+def add_task(user_id: str, title: str, detail: str = "", kind: str = "followup",
+             due_at: Optional[str] = None) -> Dict[str, Any]:
+    if kind not in ("report", "alarm-review", "followup"):
+        raise ValueError(f"非法任务类型: {kind}")
+    with _lock:
+        conn = get_conn()
+        cur = conn.execute(
+            "INSERT INTO tasks(user_id, title, detail, kind, status, due_at, created_at) "
+            "VALUES (?,?,?,?,'open',?,?)",
+            (user_id, title[:80], detail, kind, due_at, _now()),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM tasks WHERE id = ?", (cur.lastrowid,)).fetchone()
+        return dict(row)
+
+
+def list_tasks(user_id: str, status: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_conn()
+    if status:
+        rows = conn.execute(
+            "SELECT * FROM tasks WHERE user_id = ? AND status = ? ORDER BY due_at IS NULL, due_at, id DESC",
+            (user_id, status),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM tasks WHERE user_id = ? ORDER BY status = 'done', due_at IS NULL, due_at, id DESC",
+            (user_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_task(task_id: int, user_id: str, status: Optional[str] = None,
+                title: Optional[str] = None, due_at: Optional[str] = None) -> bool:
+    owner = task_owner(task_id)
+    if owner != user_id:
+        return False
+    with _lock:
+        conn = get_conn()
+        sets, args = [], []
+        if status is not None:
+            if status not in ("open", "done"):
+                raise ValueError(f"非法状态: {status}")
+            sets.append("status = ?")
+            args.append(status)
+            sets.append("done_at = ?")
+            args.append(_now() if status == "done" else None)
+        if title is not None:
+            sets.append("title = ?")
+            args.append(title[:80])
+        if due_at is not None:
+            sets.append("due_at = ?")
+            args.append(due_at)
+        if not sets:
+            return False
+        args.append(task_id)
+        cur = conn.execute(f"UPDATE tasks SET {', '.join(sets)} WHERE id = ?", args)
+        conn.commit()
+        return cur.rowcount > 0
+
+
+def delete_task(task_id: int, user_id: str) -> bool:
+    if task_owner(task_id) != user_id:
+        return False
+    with _lock:
+        conn = get_conn()
+        cur = conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+        conn.commit()
+        return cur.rowcount > 0
+
+
+def task_owner(task_id: int) -> Optional[str]:
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT user_id FROM tasks WHERE id = ?", (task_id,)
+    ).fetchone()
+    return row["user_id"] if row else None
+
 
 def stats() -> Dict[str, Any]:
     conn = get_conn()
