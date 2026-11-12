@@ -126,3 +126,67 @@ E:\AI\BOT\
 2. `desktop/ui` 建 React+TS+Tailwind 工程, 落设计 token（色板/字体/圆角/动效曲线）
 3. backend PyInstaller 打包脚本验证 sidecar 拉起
 4. 产出: 毛玻璃登录页跑在真窗口里 —— 立即可见"iOS 风格"效果
+
+---
+
+# 里程碑 v4.3 —— 下一阶段开发规划（基于团队液态玻璃基线）
+
+> 基线: 团队已交付液态玻璃 UI（三档性能开关 data-glass=on|eco|off）、品牌图标全套、
+> 网页标题栏 + WebMessage 窗口交互闭环（close/minimize/maximize/theme/reload）、
+> WindowChrome 缩放方案（airspace 问题正确解法）。65 测试 / 构建全绿。
+
+## 已确认的基础设施（后续开发直接用）
+
+| 通道 | 用法 |
+|---|---|
+| `chrome.webview.postMessage(action)` | 前端 → 壳动作: close/minimize/maximize/theme:*/reload（可扩展） |
+| 壳 `OnWebMessage` 映射表 | 新增桌面能力只需在 C# switch 加 case |
+| `data-glass` 三档 | 性能开关, 设置页需接入 |
+| `window.__fab` 调试桥 | 桌面端页面状态验证（沿用） |
+
+## P-A 原生通知闭环（告警 → 桌面气泡）★ 最高价值
+
+1. 后端: `GET /api/tasks/alarms/since?ts=` 增量接口（watcher 复用）;
+2. 前端: Chat/Home 挂通知轮询(60s) → 新 CRITICAL/ALARM → 应用内通知中心(铃铛+未读数)
+   + `postMessage("toast:级别|机台|内容")`;
+3. 壳: OnWebMessage 加 `toast` → NotifyIcon.ShowBalloonTip（后续可升 WinRT toast 常驻通知中心）;
+4. 验收: 演示库注入新 CRITICAL 告警 → 30 秒内桌面气泡弹出 + 铃铛红点。
+
+## P-B 数据台图表
+
+- 引入 recharts: 良率趋势折线（yield_daily）、告警按机台/级别条形（by_eqp 已有）;
+- Text2SQL 结果自动识别: 有日期列+数值列 → 提供表格/折线切换;
+- 验收: 「最近两周良率趋势」一键出图。
+
+## P-C 任务中心深化
+
+- 交班报告一键生成: 汇总本班告警/良率/在制 → Markdown/Word 导出（复用后端模板）;
+- watcher 配置 UI（级别/间隔/渠道）→ PATCH /api/admin/config 子集;
+- 任务持久化: SQLite tasks 表（创建/完成/过期）。
+
+## P-D 设置整合
+
+- 液态玻璃三档开关进设置页（同步 html.data-glass 与壳主题消息）;
+- 服务器/模型配置只读展示 + admin 可编辑（新增 GET/PUT /api/admin/config）;
+- 主题消息与壳 Mica 明暗联动（theme:dark/light 已通，补双向）。
+
+## P-E 打包发布固化
+
+- `deploy/desktop-package.ps1`: 一键 (前端 build → PyInstaller → dotnet publish → 组装 dist/FabBot);
+- csproj 确认 `<ApplicationIcon>Assets/fabbot.ico</ApplicationIcon>`（exe/任务栏/托盘统一品牌）;
+- Inno Setup 安装包（开始菜单/桌面快捷方式/卸载/WebView2 检测）+ 内网自动更新检查。
+
+## P-F 工程健康
+
+- scripts/desktop-smoke.ps1: 拉壳 → 等就绪 → 截屏 → 杀进程（夜间门禁可挂）;
+- 前端新增组件纳入 tsc 严格与构建门禁（已通过）; 评测 59 条回归保持 100%。
+
+## 排期（合计 ~8 个工作日）
+
+| 周 | 内容 |
+|---|---|
+| 第 1~2 天 | P-A 通知闭环（含壳 toast case） |
+| 第 3~4 天 | P-B 数据台图表 |
+| 第 5~6 天 | P-C 任务中心深化（报告生成） |
+| 第 7 天 | P-D 设置整合 + P-F 冒烟脚本 |
+| 第 8 天 | P-E 打包发布 → v4.3 安装包交付 |
