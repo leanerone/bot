@@ -1,5 +1,5 @@
 {
- "time": "2026-11-13T03:09:05",
+ "time": "2026-11-13T03:39:22",
  "mode": "offline",
  "topk": 6,
  "kb": {
@@ -47,7 +47,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-003",
@@ -170,7 +170,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-012",
@@ -183,7 +183,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-013",
@@ -212,7 +212,7 @@
    ],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-015",
@@ -319,7 +319,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-023",
@@ -383,7 +383,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "LITHO光刻机台异常处置SOP.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-028",
@@ -411,7 +411,7 @@
    ],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-030",
@@ -520,7 +520,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "LITHO光刻机台异常处置SOP.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-038",
@@ -601,7 +601,7 @@
    "sql": "SELECT eqp_group, COUNT(*) AS cnt FROM eqp WHERE status = 'DOWN' GROUP BY eqp_group ORDER BY cnt DESC LIMIT 20",
    "rows": 1,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-003",
@@ -610,7 +610,7 @@
    "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
    "rows": 4,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-004",
@@ -655,7 +655,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-009",
@@ -664,7 +664,7 @@
    "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-010",
@@ -709,7 +709,7 @@
    "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
    "rows": 4,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-015",
@@ -718,7 +718,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-016",
@@ -727,7 +727,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-017",
@@ -736,7 +736,7 @@
    "sql": "SELECT eqp_group, COUNT(*) AS cnt FROM eqp WHERE status = 'DOWN' GROUP BY eqp_group ORDER BY cnt DESC LIMIT 20",
    "rows": 1,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   }
  ]
 }
