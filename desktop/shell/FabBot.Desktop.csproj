@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>FabBot</AssemblyName>
-    <Version>4.2.0</Version>
+    <Version>4.3.0</Version>
     <!-- exe 资源管理器图标 / 任务栏图标 -->
     <ApplicationIcon>Assets\fabbot.ico</ApplicationIcon>
   </PropertyGroup>

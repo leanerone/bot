@@ -75,6 +75,8 @@ def create_app() -> FastAPI:
 
     # 桌面前端 (React 构建产物) 存在时, 由后端托管 —— 与 API 同源, Cookie 免跨域
     dist = ROOT / "desktop" / "ui" / "dist"
+    if not dist.exists():
+        dist = ROOT / "ui_dist"  # PyInstaller 冻结布局 (desktop-package 打入)
     if dist.exists():
         from fastapi.staticfiles import StaticFiles
 

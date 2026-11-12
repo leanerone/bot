@@ -10,10 +10,9 @@ from typing import Any, Dict
 
 import yaml
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
 
 from app.api.deps import require_role
-from app.config import ROOT, abs_path
+from app.config import abs_path
 
 router = APIRouter(prefix="/api/admin")
 

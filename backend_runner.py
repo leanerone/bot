@@ -84,6 +84,12 @@ watcher:
 """
 
 meipass = Path(getattr(sys, "_MEIPASS", base))
+ui_dist = meipass / "ui_dist"
+if ui_dist.exists():
+    target_ui = root / "ui_dist"
+    if not target_ui.exists():
+        shutil.copytree(ui_dist, target_ui, dirs_exist_ok=True)
+        print("[runner] 桌面前端已落位 ui_dist")
 
 # 1) config.yaml 落位 (bundle 优先, 损坏/缺失用内嵌兜底)
 target_cfg = root / "config.yaml"

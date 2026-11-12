@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from app.adapters.mock_mes import MockMESAdapter
 
@@ -33,7 +33,7 @@ def build_shift_report(hours: int = 12,
     generated = datetime.now().strftime("%Y-%m-%d %H:%M")
     md_lines = [
         f"# 交班报告（近 {hours} 小时）",
-        f"",
+        "",
         f"生成时间：{generated}",
         "",
         "## 一、未处理告警",
