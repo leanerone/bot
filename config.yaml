@@ -1,70 +1,62 @@
-# ===== Fab Bot 配置 =====
-# 离线演示: 保持 llm.mock=true, 无 GPU 也能跑通全流程
-# 接入真实模型: 启动 vLLM (见 README) 后把 mock 改为 false
-
 llm:
-  mock: true                          # true=内置 Mock 演示; false=走 OpenAI 兼容接口
-  base_url: "http://127.0.0.1:8000/v1"  # vLLM; Ollama 为 http://127.0.0.1:11434/v1
-  api_key: "EMPTY"
-  model: "Qwen2.5-32B-Instruct-AWQ"
+  mock: true
+  base_url: http://127.0.0.1:8000/v1
+  api_key: EMPTY
+  model: Qwen2.5-32B-Instruct-AWQ
   timeout: 120
-
 rag:
-  knowledge_path: "data/knowledge"    # 待导入文档目录 (.md/.txt/.docx/.pdf)
-  store_path: "data/vector_store"
-  chunk_size: 500                     # 中文按字符数
+  knowledge_path: data/knowledge
+  store_path: data/vector_store
+  chunk_size: 500
   chunk_overlap: 80
   top_k: 6
-  hybrid: true                        # BM25+向量混合检索 (RRF 融合), 机台号等关键词更稳
+  hybrid: true
   embedding:
-    provider: mock                    # mock | openai (兼容接口, 生产建议 BGE-M3)
-    base_url: "http://127.0.0.1:8001/v1"
-    model: "bge-m3"
-
+    provider: mock
+    base_url: http://127.0.0.1:8001/v1
+    model: bge-m3
 sqlbot:
-  db_path: "data/demo/fab_demo.db"    # 生产环境: 换成 IT 侧只读中间库的连接方式
+  db_path: data/demo/fab_demo.db
   max_rows: 200
-
 audit:
-  path: "data/audit.log"              # 审计双写: JSONL 文件 + SQLite (v4.0)
-
-# 告警轮询守护 (v4.0): 定时扫描只读告警 -> 群推送。默认关闭, 确认推送内容后再开
+  path: data/audit.log
 watcher:
   enabled: false
   interval_minutes: 10
-  levels: [ALARM, CRITICAL]
-  platform: wechat                  # wechat | dingtalk | both | none(仅审计)
-
-# 告警/通知推送 (v4.0): webhook 地址含密钥, 勿提交到公开仓库
+  levels:
+  - ALARM
+  - CRITICAL
+  platform: wechat
 notify:
-  wechat_webhook: ""                  # 企业微信群机器人地址 (https://qyapi.weixin.qq.com/...)
-  dingtalk_webhook: ""                # 钉钉群机器人地址 (https://oapi.dingtalk.com/...)
-
-# 持久化 (v4.0)
+  wechat_webhook: ''
+  dingtalk_webhook: ''
 store:
-  db_path: "data/app.db"              # 用户/会话/消息/审计 SQLite 库 (WAL)
-
-# 认证与角色 (v4.0): viewer < user < admin
+  db_path: data/app.db
 auth:
-  token_ttl_hours: 24                 # 登录令牌有效期
-  cookie_secure: false                # HTTPS 部署 (nginx 反代) 时改为 true
-  bootstrap_users:                    # 首次启动自动创建; 上线后立即改默认密码!
-    - {username: admin,   password: admin123, role: admin,  display_name: 管理员}
-    - {username: zhangsan, password: user123, role: user,   display_name: 张工}
-    - {username: guest,   password: guest123, role: viewer, display_name: 访客}
-
-# HCL Notes (Lotus Notes) 内容接入 —— 内容存于 Domino .nsf, 须经接口抽取
+  token_ttl_hours: 24
+  cookie_secure: false
+  bootstrap_users:
+  - username: admin
+    password: admin123
+    role: admin
+    display_name: 管理员
+  - username: zhangsan
+    password: user123
+    role: user
+    display_name: 张工
+  - username: guest
+    password: guest123
+    role: viewer
+    display_name: 访客
 notes:
-  mode: export                        # export=读导出目录(推荐) | domino=经 Domino HTTP 拉取
-  export_dir: "data/notes_export"     # 导出 JSON 目录 (契约见 app/adapters/hcl_notes.py)
+  mode: export
+  export_dir: data/notes_export
   domino:
-    base_url: "https://domino.example.com"  # Domino HTTP 地址 (办公网只读路径)
-    db_path: "KB/process.nsf"
-    view: "($All)"
-    username: ""                      # 只读服务账号, 由 Domino 管理员开通并审计
-    password: ""
-
-# 限流 (v4.0): 每用户每分钟问答次数; 0 = 不限 (多实例部署时换 Redis 实现)
+    base_url: https://domino.example.com
+    db_path: KB/process.nsf
+    view: ($All)
+    username: ''
+    password: ''
 ratelimit:
   chat_per_minute: 30
-  login_per_5min: 10                  # 登录防爆破: 同一 用户名+IP 5 分钟内最多 10 次
+  login_per_5min: 10

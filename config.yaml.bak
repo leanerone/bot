@@ -1,0 +1,62 @@
+llm:
+  mock: true
+  base_url: http://127.0.0.1:8000/v1
+  api_key: EMPTY
+  model: Qwen2.5-32B-Instruct-AWQ
+  timeout: 120
+rag:
+  knowledge_path: data/knowledge
+  store_path: data/vector_store
+  chunk_size: 500
+  chunk_overlap: 80
+  top_k: 6
+  hybrid: true
+  embedding:
+    provider: mock
+    base_url: http://127.0.0.1:8001/v1
+    model: bge-m3
+sqlbot:
+  db_path: data/demo/fab_demo.db
+  max_rows: 200
+audit:
+  path: data/audit.log
+watcher:
+  enabled: false
+  interval_minutes: 30
+  levels:
+  - ALARM
+  - CRITICAL
+  platform: wechat
+notify:
+  wechat_webhook: ''
+  dingtalk_webhook: ''
+store:
+  db_path: data/app.db
+auth:
+  token_ttl_hours: 24
+  cookie_secure: false
+  bootstrap_users:
+  - username: admin
+    password: admin123
+    role: admin
+    display_name: 管理员
+  - username: zhangsan
+    password: user123
+    role: user
+    display_name: 张工
+  - username: guest
+    password: guest123
+    role: viewer
+    display_name: 访客
+notes:
+  mode: export
+  export_dir: data/notes_export
+  domino:
+    base_url: https://domino.example.com
+    db_path: KB/process.nsf
+    view: ($All)
+    username: ''
+    password: ''
+ratelimit:
+  chat_per_minute: 30
+  login_per_5min: 10
