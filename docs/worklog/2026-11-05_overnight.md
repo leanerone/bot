@@ -273,3 +273,4 @@
 - H-GATE5 (03:09): exit=0
 - H-GATE6 (03:39): exit=0
 - H-GATE7 (04:09): exit=0
+- H-GATE8 (04:39): exit=0
