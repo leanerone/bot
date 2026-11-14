@@ -7,12 +7,14 @@ import Chat from "./pages/Chat";
 import Knowledge from "./pages/Knowledge";
 import Data from "./pages/Data";
 import Tasks from "./pages/Tasks";
+import Admin from "./pages/Admin";
+import Skills from "./pages/Skills";
 import Settings from "./pages/Settings";
 import TitleBar, { GlassMode } from "./components/TitleBar";
 import { Icon, IconName } from "./components/icons";
 import { MenuItem, MenuPop, useMenuDismiss } from "./components/Menu";
 
-type View = "home" | "chat" | "kb" | "data" | "tasks" | "settings";
+type View = "home" | "chat" | "kb" | "data" | "tasks" | "skills" | "admin" | "settings";
 type NavItem = { key: View; icon: IconName; label: string };
 
 /* 与桌面客户端一致：主功能一组、运维一组、最近会话一组 */
@@ -24,6 +26,8 @@ const NAV_MAIN: NavItem[] = [
 ];
 const NAV_OPS: NavItem[] = [
   { key: "tasks", icon: "bell", label: "告警值守" },
+  { key: "skills", icon: "book", label: "技能中心" },
+  { key: "admin", icon: "database", label: "管理" },
   { key: "settings", icon: "settings", label: "设置" },
 ];
 
@@ -188,7 +192,7 @@ export default function App() {
 
             <div className="nav-group">
               {!collapsed && <div className="nav-group-title">运维管理</div>}
-              {NAV_OPS.map(navBtn)}
+              {NAV_OPS.filter(n => n.key !== "admin" || me.role === "admin").map(navBtn)}
             </div>
 
             {!collapsed && (
@@ -234,6 +238,8 @@ export default function App() {
             {view === "kb" && <Knowledge me={me} />}
             {view === "data" && <Data me={me} />}
             {view === "tasks" && <Tasks me={me} />}
+            {view === "skills" && <Skills me={me} />}
+            {view === "admin" && <Admin me={me} />}
             {view === "settings" && <Settings me={me} health={health} dark={dark} setDark={setDark}
               glass={glass} setGlass={setGlass} refreshHealth={refreshHealth} />}
           </div>

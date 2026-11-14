@@ -1,9 +1,10 @@
 """Skill 发现接口: Agent/平台经此发现可用 skill（注册表只读; 启停管理后续版本）。"""
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 
 from app.api.deps import require_user
 from app.skillhub import registry
@@ -29,3 +30,16 @@ def get_skill(name: str, request: Request):
     if s["errors"]:
         raise HTTPException(422, {"message": "skill 定义未通过校验", "errors": s["errors"]})
     return {"skill": s}
+
+
+class SkillRunIn(BaseModel):
+    args: Optional[Dict[str, Any]] = None
+
+
+@router.post("/skills/{name}/run")
+def run_skill_endpoint(name: str, request: Request, body: Optional[SkillRunIn] = None):
+    """D4/D5: 执行技能 (受控执行 + 全量审计); 权限 user+。"""
+    from app.skillhub import runner
+
+    user = require_user(request)
+    return runner.run_skill(name, user=user["username"], args=(body.args if body else None))

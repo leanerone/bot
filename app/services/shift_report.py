@@ -60,3 +60,53 @@ def build_shift_report(hours: int = 12,
         "wip": wip,
         "markdown": "\n".join(md_lines),
     }
+
+
+def export_docx(report: Dict[str, Any]) -> bytes:
+    """B4: 交班报告 -> Word (.docx) 字节流, 供下载端点使用。"""
+    try:
+        import io
+
+        from docx import Document
+        from docx.shared import Pt
+    except ImportError as exc:  # pragma: no cover
+        raise RuntimeError("需要 python-docx: pip install python-docx") from exc
+
+    doc = Document()
+    doc.add_heading(f"交班报告（近 {report['hours']} 小时）", level=0)
+    para = doc.add_paragraph(f"生成时间：{report['generated_at']}")
+    para.runs[0].font.size = Pt(10)
+
+    doc.add_heading("一、未处理告警", level=1)
+    alarms = report["alarms"]
+    doc.add_paragraph(f"未处理 {alarms['total_open']} 条（CRITICAL {alarms['critical']} 条）")
+    if alarms["items"]:
+        table = doc.add_table(rows=1, cols=5)
+        table.style = "Light Grid Accent 1"
+        hdr = table.rows[0].cells
+        for i, name in enumerate(("时间", "机台", "级别", "告警码", "内容")):
+            hdr[i].text = name
+        for a in alarms["items"]:
+            row = table.add_row().cells
+            row[0].text = str(a.get("dt", ""))
+            row[1].text = str(a.get("eqp_id", ""))
+            row[2].text = str(a.get("level", ""))
+            row[3].text = str(a.get("code", ""))
+            row[4].text = str(a.get("message", ""))[:40]
+
+    doc.add_heading("二、近 7 天良率（按产品）", level=1)
+    for y in report["yield"]:
+        doc.add_paragraph(f"{y['name']}: 平均良率 {y['avg']:.2%}", style="List Bullet")
+
+    doc.add_heading("三、在制品分布", level=1)
+    for w in report["wip"]:
+        doc.add_paragraph(f"{w['product']}: {w['lots']} 批", style="List Bullet")
+
+    doc.add_heading("四、交班注意事项", level=1)
+    for line in ("未处理完的 CRITICAL 告警及其临时对策", "Hold 中的 lot 及 Hold 原因",
+                 "当天计划 PM 与预计恢复时间"):
+        doc.add_paragraph(line, style="List Bullet")
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()

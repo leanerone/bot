@@ -1,5 +1,5 @@
 {
- "time": "2026-11-13T06:11:15",
+ "time": "2026-11-15T01:49:20",
  "mode": "offline",
  "topk": 6,
  "kb": {
@@ -33,7 +33,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 3
+   "ms": 2
   },
   {
    "id": "kb-002",
@@ -265,7 +265,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-019",
@@ -305,7 +305,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-022",
@@ -397,7 +397,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "LITHO光刻机台异常处置SOP.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-029",
@@ -558,7 +558,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "CMP研磨机台异常处置SOP.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-041",
@@ -601,7 +601,7 @@
    "sql": "SELECT eqp_group, COUNT(*) AS cnt FROM eqp WHERE status = 'DOWN' GROUP BY eqp_group ORDER BY cnt DESC LIMIT 20",
    "rows": 1,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-003",
@@ -619,7 +619,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-005",
@@ -646,7 +646,7 @@
    "sql": "SELECT dt, product, die_yield FROM yield_daily ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-008",
@@ -682,7 +682,7 @@
    "sql": "SELECT dt, product, die_yield FROM yield_daily ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-012",
@@ -727,7 +727,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "sql-017",

@@ -53,3 +53,40 @@ def classify(question: str, threshold: int = DEFAULT_THRESHOLD) -> dict:
                 signals.append((pattern[:12], weight))
     intent = "sql" if score >= threshold else "kb"
     return {"intent": intent, "score": score, "signals": signals}
+
+
+# ── E2: 模型意图分类 (真实 LLM 时启用, 低置信回退关键词) ──
+
+_MODEL_SYSTEM = """你是工厂助手的意图分类器。把用户问题分为两类之一:
+- sql: 查数据 (告警列表/良率数值/机台状态/批次在制/统计排名), 期望返回表格
+- kb: 知识问答 (处置步骤/原因解释/规范要求/SOP 内容), 期望返回带引用的说明
+
+只输出 JSON: {"intent": "sql"|"kb", "confidence": 0~1}"""
+
+
+def classify_smart(question: str, threshold: int = DEFAULT_THRESHOLD) -> dict:
+    """E2: 真实 LLM 走模型分类 (温度 0, 超时/低置信回退关键词); mock 恒走关键词。"""
+    from app.config import cfg as _cfg
+
+    base = classify(question, threshold)
+    if _cfg("llm.mock", True):
+        return base
+    try:
+        from app.llm.client import get_llm
+
+        raw = get_llm().chat(
+            [{"role": "system", "content": _MODEL_SYSTEM},
+             {"role": "user", "content": (question or "")[:400]}],
+            temperature=0.0,
+        )
+        import json as _json
+
+        data = _json.loads(raw[raw.find("{"): raw.rfind("}") + 1])
+        intent = data.get("intent")
+        conf = float(data.get("confidence", 0.0))
+        if intent in ("sql", "kb") and conf >= _cfg("intent.min_confidence", 0.6):
+            return {"intent": intent, "score": base["score"], "signals": base["signals"],
+                    "via": "model", "confidence": conf}
+    except Exception:
+        pass
+    return {**base, "via": "keyword"}

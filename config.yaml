@@ -1,9 +1,14 @@
 llm:
   mock: true
+  # provider: openai(默认, 任意 OpenAI 格式) | azure(v1 兼容端点) | azure-classic(deployment URL)
+  provider: openai
   base_url: http://127.0.0.1:8000/v1
+  # Azure 示例: base_url: https://<资源名>.openai.azure.com/openai/v1, api_key: <Azure密钥>, model: <部署名>
+  api_version: "2024-10-21"      # 仅 azure-classic 使用
   api_key: EMPTY
   model: Qwen2.5-32B-Instruct-AWQ
   timeout: 120
+  fallback_mock: true            # 云端不可达时自动降级 Mock (回答首行标注)
 rag:
   knowledge_path: data/knowledge
   store_path: data/vector_store
@@ -11,6 +16,10 @@ rag:
   chunk_overlap: 80
   top_k: 6
   hybrid: true
+  rerank:
+    provider: off                # off(默认, 规则降级) | vllm(/v1/rerank 端点) | local(CrossEncoder)
+    model: BAAI/bge-reranker-v2-m3
+    top_n: 6
   embedding:
     provider: mock
     base_url: http://127.0.0.1:8001/v1
@@ -20,16 +29,21 @@ sqlbot:
   max_rows: 200
 audit:
   path: data/audit.log
+  mask_pii: true                 # 审计落盘前脱敏 手机号/邮箱/IP
+  max_text_len: 200              # 审计正文截断 (0=不截断)
 watcher:
   enabled: false
   interval_minutes: 10
   levels:
   - ALARM
   - CRITICAL
-  platform: wechat
+  platform: teams
 notify:
+  teams_webhook: ''              # Teams: O365 Connector Incoming Webhook 或 Power Automate 触发器 URL
+  teams_format: connector        # connector(MessageCard) | flow(Adaptive Card, 推荐)
   wechat_webhook: ''
   dingtalk_webhook: ''
+  feishu_webhook: ''
 store:
   db_path: data/app.db
 auth:
@@ -57,6 +71,18 @@ notes:
     view: ($All)
     username: ''
     password: ''
+  # 多库支持 (B5): 逐库增量拉取; 留空则退回上方单库配置
+  databases: []                  # 例: [{db_path: KB/process.nsf, view: "($All)"}, {db_path: KB/dev.nsf}]
+  sync:
+    interval_minutes: 0          # >0 时启用定时增量同步守护 (0=关闭)
+  domino_sync_since_days: 30     # 增量拉取回看窗口
+mcp:
+  require_key: false             # streamable-http 模式要求 X-FabBot-Key 头
+  key: ''
 ratelimit:
   chat_per_minute: 30
   login_per_5min: 10
+auth_lock:
+  max_failures: 5                # 窗口内最大失败次数 (C2 登录防爆破)
+  window_minutes: 10
+  lock_minutes: 15

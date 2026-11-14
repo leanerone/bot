@@ -1,9 +1,11 @@
 """认证依赖: 从 Cookie 或 Bearer 头解析用户, 按角色门槛放行。
 
 角色: viewer(只读问答) < user(问答+知识库导入) < admin(全部管理)。
+v4.4 (C3): 令牌绑定 UA 摘要 —— 换浏览器/设备 UA 不一致即失效, 需重登。
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Optional
 
 from fastapi import HTTPException, Request
@@ -23,11 +25,17 @@ def _token_from(request: Request) -> Optional[str]:
     return tok or None
 
 
+def ua_hash(request: Request) -> str:
+    """User-Agent 摘要 (登录时签发, 每次请求校验)。"""
+    ua = request.headers.get("user-agent", "")
+    return hashlib.sha256(ua.encode("utf-8", "ignore")).hexdigest()[:16] if ua else ""
+
+
 def current_user(request: Request) -> Optional[dict]:
     tok = _token_from(request)
     if not tok:
         return None
-    return db.resolve_token(tok)
+    return db.resolve_token(tok, ua_hash=ua_hash(request))
 
 
 def require_user(request: Request) -> dict:

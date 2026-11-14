@@ -64,11 +64,17 @@ def send_dingtalk(text: str, user: str = "system") -> Dict[str, Any]:
 
 
 def send(platform: str, text: str, user: str = "system") -> Optional[Dict[str, Any]]:
-    """统一入口: platform in {wechat, dingtalk, both}。"""
+    """统一入口: platform in {teams, wechat, dingtalk, feishu, both} (v4.4 默认 teams)。"""
+    if platform == "teams":
+        from app.notify.teams import send_teams
+        return send_teams(text, user)
     if platform == "wechat":
         return send_wechat(text, user)
     if platform == "dingtalk":
         return send_dingtalk(text, user)
+    if platform == "feishu":
+        from app.notify.feishu import send_feishu
+        return send_feishu(text, user)
     if platform == "both":
         return {"wechat": send_wechat(text, user), "dingtalk": send_dingtalk(text, user)}
     raise NotifyError(f"未知推送平台: {platform}")

@@ -395,3 +395,37 @@ html[data-glass="off"].dark .menu-pop { background: rgba(38, 38, 42, .96); }
 .dark .about-rows span { color: #B4B4BC; }
 .about-rows b { font-weight: 600; text-align: right; word-break: break-all; color: #111114; }
 .dark .about-rows b { color: #FFFFFF; }
+
+/* ── v4.4 A1/A3/A4: 动效与流式体验 ── */
+
+@keyframes msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.msg-enter { animation: msg-in .18s ease-ios both; }
+
+@keyframes shimmer { 0% { opacity: .55; } 50% { opacity: .95; } 100% { opacity: .55; } }
+.skeleton-shimmer { animation: shimmer 1.3s ease-in-out infinite; }
+
+.typing-dots { display: inline-flex; gap: 5px; align-items: center; padding: 6px 0; }
+.typing-dots i { width: 7px; height: 7px; border-radius: 50%; background: #FF9500; opacity: .4;
+  animation: shimmer 1s ease-in-out infinite; }
+.typing-dots i:nth-child(2) { animation-delay: .15s; }
+.typing-dots i:nth-child(3) { animation-delay: .3s; }
+
+/* A3: 引用上标 */
+.cite-mark { color: #FF9500; font-weight: 700; cursor: pointer; font-size: .72em;
+  padding: 0 2px; border-radius: 4px; }
+.cite-mark:hover { background: rgba(255,149,0,.12); }
+
+/* A2: 代码块头 (语言标签 + 复制) */
+.code-block { border-radius: 9px; overflow: hidden; margin: 8px 0; }
+.code-head { display: flex; justify-content: space-between; align-items: center;
+  background: #1B2431; padding: 4px 10px; }
+.code-lang { color: #7C8DA6; font-size: 11px; letter-spacing: .4px; }
+.code-copy-btn { color: #A9B7CB; background: transparent; border: 1px solid #35435C;
+  border-radius: 6px; font-size: 11px; padding: 1px 8px; cursor: pointer; }
+.code-copy-btn:hover { color: #fff; border-color: #5A7095; }
+
+/* A1: 回到底部悬浮按钮 */
+.fixed-float { position: sticky; bottom: 8px; margin-left: calc(50% - 46px);
+  background: rgba(10,132,255,.92); color: #fff; border: 0; border-radius: 999px;
+  padding: 6px 16px; font-size: 12.5px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  z-index: 30; }

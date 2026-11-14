@@ -33,7 +33,7 @@ class PasswordIn(BaseModel):
 
 
 class NotifyIn(BaseModel):
-    platform: str = "wechat"        # wechat | dingtalk | both
+    platform: str = "teams"         # teams(默认) | wechat | dingtalk | feishu | both
     text: str
 
 

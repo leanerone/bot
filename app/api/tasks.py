@@ -71,6 +71,58 @@ def shift_report(request: Request, hours: int = 12):
     return build_shift_report(hours=min(max(hours, 1), 72))
 
 
+@router.get("/shift-report/export")
+def shift_report_export(request: Request, hours: int = 12):
+    """B4: 交班报告导出 Word (.docx), 供工厂交接归档。"""
+    from fastapi.responses import Response
+
+    user = require_user(request)
+    from app.api import audit as audit_mod
+    from app.services.shift_report import build_shift_report, export_docx
+
+    report = build_shift_report(hours=min(max(hours, 1), 72))
+    data = export_docx(report)
+    audit_mod.record(user["username"], "/api/tasks/shift/export", "report",
+                     f"hours={hours}", 0)
+    return Response(
+        data,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition":
+                 f"attachment; filename=shift-report-{report['generated_at'][:10]}.docx"},
+    )
+
+
+class PushIn(BaseModel):
+    hours: int = 8
+    text: str = ""
+
+
+@router.post("/shift-report/push")
+def shift_report_push(body: PushIn, request: Request):
+    """B4: 把交班报告摘要推送到 Teams (默认) 或其他已配置渠道。"""
+    user = require_user(request)
+    from app.api import audit as audit_mod
+    from app.services.shift_report import build_shift_report
+    from app.config import cfg
+
+    report = build_shift_report(hours=min(max(body.hours, 1), 72))
+    alarms = report["alarms"]
+    text = body.text or (
+        f"交班报告（近 {report['hours']} 小时）: "
+        f"未处理告警 {alarms['total_open']} 条 (CRITICAL {alarms['critical']} 条), "
+        f"生成于 {report['generated_at']}"
+    )
+    platform = cfg("watcher.platform", "teams") or "teams"
+    from app.notify import webhook
+    try:
+        result = webhook.send(platform, text, user=user["username"])
+    except Exception as exc:
+        raise HTTPException(400, str(exc)) from exc
+    audit_mod.record(user["username"], "/api/tasks/shift/push", "notify",
+                     f"hours={body.hours}; {text[:100]}", 0)
+    return {"ok": True, "platform": platform, "result": result}
+
+
 # ── 我的任务 (CRUD) ──
 
 class TaskIn(BaseModel):

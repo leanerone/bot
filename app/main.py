@@ -18,12 +18,14 @@ from app.api import auth_routes
 from app.api.routes import router
 from app.api.tasks import router as tasks_router
 from app.api.skillhub import router as skillhub_router
+from app.api.agent_routes import router as agent_router
 from app.api.charts import router as charts_router
 from app.api.admin_config import router as admin_config_router
 from app.config import ROOT, abs_path, cfg
 from app.rag.ingest import get_store, ingest_dir
 from app.store import db
 from app.watcher.alarm_watcher import start_if_enabled
+from app.watcher.notes_sync import start_if_enabled as start_notes_sync
 
 _watcher = None
 
@@ -55,13 +57,16 @@ async def lifespan(app: FastAPI):
     global _watcher
     _bootstrap()
     _watcher = start_if_enabled()  # config watcher.enabled=false 时为 None
+    _notes_daemon = start_notes_sync()  # B5: notes.sync.interval_minutes>0 且 mode=domino 时启用
     yield
     if _watcher:
         _watcher.stop()
+    if _notes_daemon:
+        _notes_daemon.stop()
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Fab Bot", version="4.2.0", lifespan=lifespan)
+    app = FastAPI(title="Fab Bot", version="4.4.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
     )
@@ -70,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_api.router)
     app.include_router(tasks_router)
     app.include_router(skillhub_router)
+    app.include_router(agent_router)
     app.include_router(charts_router)
     app.include_router(admin_config_router)
 

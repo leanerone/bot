@@ -14,12 +14,14 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.adapters.hcl_notes import ingest_notes_domino, ingest_notes_export
+from app.adapters.hcl_notes import (ingest_notes_domino, ingest_notes_domino_multi,
+                                    ingest_notes_export)
 from app.api import audit as audit_mod
 from app.api.deps import require_role, require_user
-from app.api.intent import classify
+from app.api.intent import classify_smart
 from app.api.limits import check_rate
 from app.config import ROOT, abs_path, cfg
+from app.guard import prompt_guard
 from app.llm.client import LLMError
 from app.rag import pipeline
 from app.rag.ingest import get_store, ingest_dir
@@ -28,6 +30,16 @@ from app.sqlbot import text2sql
 from app.sqlbot.validator import SQLRejected
 
 router = APIRouter(prefix="/api")
+
+
+def _guard_scan(user: dict, q: str, api: str) -> str:
+    """C1 注入扫描 (纵深第 1 层): 剥伪造分隔符 + 命中特征审计留痕, 不阻断正常问答。"""
+    cleaned = prompt_guard.sanitize(q)
+    verdict = prompt_guard.scan(q)
+    if verdict["injection"]:
+        audit_mod.record(user["username"], api, "injection",
+                         f"tags={','.join(verdict['tags'])}; q={cleaned[:160]}", 0)
+    return cleaned
 
 
 class AskIn(BaseModel):
@@ -44,6 +56,7 @@ class NotesIngestIn(BaseModel):
     mode: Optional[str] = None      # export (默认) | domino
     path: Optional[str] = None
     view: Optional[str] = None
+    full: Optional[bool] = None     # true=全量重拉 (默认增量)
 
 
 class SessionIn(BaseModel):
@@ -89,10 +102,11 @@ def chat(body: AskIn, request: Request):
     q = body.question.strip()
     if not q:
         raise HTTPException(400, "问题不能为空")
+    q = _guard_scan(user, q, "/api/chat")
     t0 = time.time()
     session = _resolve_session(user, body.session_id, q)
     try:
-        if classify(q)["intent"] == "sql":
+        if classify_smart(q)["intent"] == "sql":
             result = {"type": "sql", **text2sql.query(q, history=body.history)}
         else:
             result = {"type": "kb", **pipeline.ask(q, history=body.history)}
@@ -114,6 +128,7 @@ def chat_stream(body: AskIn, request: Request):
     q = body.question.strip()
     if not q:
         raise HTTPException(400, "问题不能为空")
+    q = _guard_scan(user, q, "/api/chat/stream")
     session = _resolve_session(user, body.session_id, q)
     history = body.history
 
@@ -126,7 +141,7 @@ def chat_stream(body: AskIn, request: Request):
         result_holder: dict = {}
         persisted = False
         try:
-            if classify(q)["intent"] == "sql":
+            if classify_smart(q)["intent"] == "sql":
                 intent = "sql"
                 yield sse("meta", {"type": "sql", "session_id": session["id"]})
                 result_holder = {"type": "sql", **text2sql.query(q, history=history)}
@@ -173,6 +188,7 @@ def kb_ask(body: AskIn, request: Request):
     user = require_user(request)
     check_rate(user["id"])
     q = body.question.strip()
+    q = _guard_scan(user, q, "/api/kb/ask")
     t0 = time.time()
     result = {"type": "kb", **pipeline.ask(q, history=body.history)}
     if body.session_id:
@@ -194,6 +210,7 @@ def data_query(body: AskIn, request: Request):
     user = require_user(request)
     check_rate(user["id"])
     q = body.question.strip()
+    q = _guard_scan(user, q, "/api/data/query")
     t0 = time.time()
     try:
         result = {"type": "sql", **text2sql.query(q, history=body.history)}
@@ -324,9 +341,15 @@ def kb_ingest_notes(request: Request, body: Optional[NotesIngestIn] = None):
     user = require_role(request, "user")
     mode = (body.mode if body and body.mode else None) or cfg("notes.mode", "export")
     if mode == "domino":
-        client = _notes_domino_client()
-        view = (body.view if body and body.view else None) or cfg("notes.domino.view", "($All)")
-        summary = ingest_notes_domino(client, view=view)
+        incremental = not (body and body.full is True)
+        multi = cfg("notes.databases") or []
+        if multi and not (body and body.view):
+            # B5 多库: notes.databases 数组逐库拉取 (显式 view 时退回单库)
+            summary = ingest_notes_domino_multi(multi, incremental=incremental)
+        else:
+            client = _notes_domino_client()
+            view = (body.view if body and body.view else None) or cfg("notes.domino.view", "($All)")
+            summary = ingest_notes_domino(client, view=view, incremental=incremental)
     else:
         target = _safe_kb_dir(
             body.path if body and body.path else None, cfg("notes.export_dir", "data/notes_export")
@@ -354,5 +377,5 @@ def health():
         "kb_chunks": len(get_store()),
         "llm": {"mock": bool(cfg("llm.mock", True)), "model": cfg("llm.model", "")},
         "notes_mode": cfg("notes.mode", "export"),
-        "version": "4.0.0",
+        "version": "4.4.0",
     }

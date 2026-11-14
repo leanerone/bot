@@ -19,15 +19,24 @@ class LoginIn(BaseModel):
 
 @router.post("/auth/login")
 def login(body: LoginIn, request: Request):
+    from app.api import auth_lock
     from app.api.limits import check_login
 
-    check_login(f"{body.username.strip()}@{request.client.host if request.client else '?'}")
+    ip = request.client.host if request.client else "?"
+    check_login(f"{body.username.strip()}@{ip}")
+    locked = auth_lock.check_locked(body.username.strip(), ip)
+    if locked:
+        db.log_audit(body.username.strip(), "/api/auth/login", "", "", 0, status="locked")
+        raise HTTPException(423, f"失败次数过多, 账号已临时锁定, 请 {max(1, locked // 60)} 分钟后再试")
     user = db.authenticate(body.username.strip(), body.password)
     if not user:
+        auth_lock.record_failure(body.username.strip(), ip)
         db.log_audit(body.username.strip(), "/api/auth/login", "", "", 0, status="fail")
         raise HTTPException(401, "用户名或密码错误")
+    auth_lock.record_success(user["username"], ip)
     ttl = float(cfg("auth.token_ttl_hours", 24))
-    token, _ = db.issue_token(user["id"], ttl)
+    from app.api.deps import ua_hash as _ua_hash
+    token, _ = db.issue_token(user["id"], ttl, ua_hash=_ua_hash(request))
     resp = JSONResponse({"ok": True, "user": public_user(user)})
     resp.set_cookie(COOKIE_NAME, token, httponly=True, samesite="lax",
                     path="/", max_age=int(ttl * 3600),
@@ -42,6 +51,17 @@ def logout(request: Request):
     if tok:
         db.revoke_token(tok)
     resp = JSONResponse({"ok": True})
+    resp.delete_cookie(COOKIE_NAME, path="/")
+    return resp
+
+
+@router.post("/auth/logout_all")
+def logout_all(request: Request):
+    """C3: 全端登出 —— 吊销当前用户全部令牌 (换密码泄露/丢设备场景)。"""
+    user = require_user(request)
+    db.revoke_user_tokens(user["id"])
+    db.log_audit(user["username"], "/api/auth/logout_all", "", "", 0)
+    resp = JSONResponse({"ok": True, "revoked": "all"})
     resp.delete_cookie(COOKIE_NAME, path="/")
     return resp
 

@@ -3,6 +3,12 @@
 统一走 OpenAI 兼容的 /chat/completions 接口, 因此 vLLM / Ollama / 各类推理服务
 都可直接对接, 只需修改 config.yaml 的 base_url 与 model, 业务代码零改动。
 
+v4.4 provider 层 (E0):
+- provider=openai        默认, 任意 OpenAI 格式服务 (vLLM/Ollama/DeepSeek/OneAPI), Bearer 认证
+- provider=azure         Azure OpenAI v1 兼容端点 (https://{res}.openai.azure.com/openai/v1), api-key 头
+- provider=azure-classic 经典 deployment URL (.../openai/deployments/{model}/chat/completions?api-version=..)
+- llm.fallback_mock=true 云端不可达时自动降级 Mock 并在回答首行标注, 不白屏。
+
 config.llm.mock = true 时使用内置 MockLLM: 无 GPU、无推理服务的环境也能
 跑通全流程 (回答为占位内容, 仅用于演示链路)。
 """
@@ -22,6 +28,9 @@ class LLMError(RuntimeError):
     """LLM 服务不可用或调用失败。"""
 
 
+DEGRADE_MARK = "(云端模型不可达, 已自动降级 Mock —— 请检查 llm 配置/网络)"
+
+
 def _get_message(messages: List[dict], role: str) -> str:
     for m in reversed(messages):
         if m.get("role") == role:
@@ -30,11 +39,35 @@ def _get_message(messages: List[dict], role: str) -> str:
 
 
 class OpenAICompatLLM:
-    def __init__(self, base_url: str, api_key: str, model: str, timeout: float = 120.0):
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        model: str,
+        timeout: float = 120.0,
+        provider: str = "openai",
+        api_version: str = "2024-10-21",
+    ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key or "EMPTY"
         self.model = model
         self.timeout = timeout
+        self.provider = (provider or "openai").lower()
+        self.api_version = api_version
+
+    def _endpoint(self) -> str:
+        if self.provider == "azure-classic":
+            return (
+                f"{self.base_url}/openai/deployments/{self.model}"
+                f"/chat/completions?api-version={self.api_version}"
+            )
+        return f"{self.base_url}/chat/completions"
+
+    def _headers(self) -> dict:
+        # Azure 系列用 api-key 头; 其余 OpenAI 兼容服务用 Bearer
+        if self.provider in ("azure", "azure-classic"):
+            return {"api-key": self.api_key}
+        return {"Authorization": f"Bearer {self.api_key}"}
 
     def chat(self, messages: List[dict], temperature: Optional[float] = None) -> str:
         payload = {"model": self.model, "messages": messages}
@@ -42,14 +75,14 @@ class OpenAICompatLLM:
             payload["temperature"] = temperature
         try:
             resp = httpx.post(
-                f"{self.base_url}/chat/completions",
+                self._endpoint(),
                 json=payload,
-                headers={"Authorization": f"Bearer {self.api_key}"},
+                headers=self._headers(),
                 timeout=self.timeout,
             )
             resp.raise_for_status()
         except httpx.HTTPError as exc:
-            raise LLMError(f"LLM 服务不可用 ({self.base_url}): {exc}") from exc
+            raise LLMError(f"LLM 服务不可用 ({self._endpoint()}): {exc}") from exc
         try:
             return resp.json()["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as exc:
@@ -64,9 +97,9 @@ class OpenAICompatLLM:
             with httpx.Client(timeout=self.timeout) as client:
                 with client.stream(
                     "POST",
-                    f"{self.base_url}/chat/completions",
+                    self._endpoint(),
                     json=payload,
-                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    headers=self._headers(),
                 ) as resp:
                     resp.raise_for_status()
                     for line in resp.iter_lines():
@@ -83,7 +116,7 @@ class OpenAICompatLLM:
                         if delta.get("content"):
                             yield delta["content"]
         except httpx.HTTPError as exc:
-            raise LLMError(f"LLM 服务不可用 ({self.base_url}): {exc}") from exc
+            raise LLMError(f"LLM 服务不可用 ({self._endpoint()}): {exc}") from exc
 
 
 class MockLLM:
@@ -144,12 +177,47 @@ class MockLLM:
             time.sleep(0.02)
 
 
+class DegradedLLM:
+    """云端不可达时自动降级: 返回 Mock 回答并首行标注 (E0 断网降级)。"""
+
+    def __init__(self, real: OpenAICompatLLM, fallback: "MockLLM"):
+        self.real = real
+        self.fallback = fallback
+        self.degraded = False  # 供健康检查/前端标黄读取
+
+    def chat(self, messages: List[dict], temperature: Optional[float] = None) -> str:
+        try:
+            return self.real.chat(messages, temperature)
+        except LLMError:
+            self.degraded = True
+            return f"⚠️ {DEGRADE_MARK}\n\n" + self.fallback.chat(messages, temperature)
+
+    def chat_stream(self, messages: List[dict], temperature: Optional[float] = None) -> Iterator[str]:
+        try:
+            first = True
+            for chunk in self.real.chat_stream(messages, temperature):
+                first = False
+                yield chunk
+            if first:  # 空流视为异常
+                raise LLMError("空响应")
+            return
+        except LLMError:
+            self.degraded = True
+            yield f"⚠️ {DEGRADE_MARK}\n\n"
+            yield from self.fallback.chat_stream(messages, temperature)
+
+
 def get_llm():
     if cfg("llm.mock", True):
         return MockLLM()
-    return OpenAICompatLLM(
+    real = OpenAICompatLLM(
         base_url=cfg("llm.base_url", "http://127.0.0.1:8000/v1"),
         api_key=cfg("llm.api_key", "EMPTY"),
         model=cfg("llm.model", "Qwen2.5-32B-Instruct-AWQ"),
         timeout=float(cfg("llm.timeout", 120)),
+        provider=cfg("llm.provider", "openai"),
+        api_version=cfg("llm.api_version", "2024-10-21"),
     )
+    if cfg("llm.fallback_mock", True):
+        return DegradedLLM(real, MockLLM())
+    return real

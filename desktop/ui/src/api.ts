@@ -21,7 +21,7 @@ export interface SessionMeta { id: string; title: string; updated_at: string; me
 export interface DbMessage { id: number; role: string; type: string; content: string;
   sources?: Source[]; sql_text?: string; columns?: string[]; rows?: any[]; row_count?: number;
   rating?: string; created_at: string }
-export interface Source { idx: number; source: string; score: number; excerpt?: string; text?: string }
+export interface Source { idx: number; source: string; score: number; excerpt?: string; text?: string; link?: string }
 export interface ChatMsg {
   role: "user" | "assistant";
   id?: number | null;

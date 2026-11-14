@@ -124,6 +124,11 @@ class NoteDoc:
         db = self.db_path or self.db_title or "notesdb"
         return f"notes://{db}/{self.unid[:8]} · {self.subject[:40]}"
 
+    def doclink(self) -> str:
+        """B5: 完整 doclink, 引用弹层"在 Notes 中打开"使用 (notes:// 协议唤起客户端)。"""
+        db = self.db_path or ""
+        return f"notes://{db}/{self.unid}" if self.unid else ""
+
 
 # ── mode=export: 读取导出目录 ──
 
@@ -255,15 +260,21 @@ class DominoNotesClient:
         resp.raise_for_status()
         return resp.text
 
-    def iter_docs(self, view: str = "($All)") -> Iterator[NoteDoc]:
+    def iter_docs(self, view: str = "($All)",
+                  skip_unids: Optional[set] = None) -> Iterator[NoteDoc]:
+        """skip_unids (B5 增量): 已入库文档不再重复拉取正文 (HTML 拉取是主要开销)。"""
+        skip = skip_unids or set()
         for unid in self.list_unids(view):
+            if unid in skip:
+                continue
             html = self.fetch_doc_html(unid)
             yield NoteDoc(unid=unid, subject=self._extract_title(html),
                           db_path=self.db_path, body_html=html)
 
 
 def ingest_notes_domino(client: DominoNotesClient, store: Optional[LocalVectorStore] = None,
-                        embedder=None, view: str = "($All)") -> Dict[str, Any]:
+                        embedder=None, view: str = "($All)",
+                        incremental: bool = True) -> Dict[str, Any]:
     if store is None:
         store = get_store()
     embedder = embedder or get_embedder()
@@ -273,17 +284,49 @@ def ingest_notes_domino(client: DominoNotesClient, store: Optional[LocalVectorSt
     size = int(cfg("rag.chunk_size", 500))
     overlap = int(cfg("rag.chunk_overlap", 80))
     doc_count = 0
-    for doc in client.iter_docs(view=view):
+    skip = _existing_note_unids(store) if incremental else set()
+    for doc in client.iter_docs(view=view, skip_unids=skip):
         text = doc.plain_text().strip()
         if not text:
             continue
         doc_count += 1
         label = doc.source_label()
+        link = doc.doclink()
         for chunk in chunk_text(f"{doc.subject}\n\n{text}", size=size, overlap=overlap):
             vectors.extend(embedder.embed([chunk]))
-            metas.append({"source": label, "text": chunk})
+            metas.append({"source": label, "text": chunk,
+                          "notes_unid": doc.unid, "link": link})
             chunks_total += 1
     if vectors:
         store.add(vectors, metas)
-    return {"docs": doc_count, "chunks": chunks_total,
+    return {"docs": doc_count, "chunks": chunks_total, "skipped": len(skip),
             "attachments": 0, "links": 0, "errors": errors}
+
+
+def _existing_note_unids(store: LocalVectorStore) -> set:
+    """B5 增量: 已入库的 notes 文档 unid 集合 (meta.notes_unid)。"""
+    return {m.get("notes_unid") for m in store.metas if m.get("notes_unid")}
+
+
+def ingest_notes_domino_multi(specs: List[Dict[str, str]], store=None,
+                              embedder=None, incremental: bool = True) -> Dict[str, Any]:
+    """B5 多库: notes.databases 数组逐库拉取, 单库失败不阻塞其他库。"""
+    total = {"docs": 0, "chunks": 0, "skipped": 0, "errors": []}
+    for spec in specs:
+        try:
+            client = DominoNotesClient(
+                base_url=spec.get("base_url") or cfg("notes.domino.base_url", ""),
+                db_path=spec.get("db_path", ""),
+                username=spec.get("username") or cfg("notes.domino.username", ""),
+                password=spec.get("password") or cfg("notes.domino.password", ""),
+            )
+            r = ingest_notes_domino(client, store=store, embedder=embedder,
+                                    view=spec.get("view", "($All)"),
+                                    incremental=incremental)
+            total["docs"] += r["docs"]
+            total["chunks"] += r["chunks"]
+            total["skipped"] += r.get("skipped", 0)
+            total["errors"].extend(r.get("errors", []))
+        except Exception as exc:  # noqa: BLE001 —— 单库失败隔离
+            total["errors"].append(f"{spec.get('db_path', '?')}: {exc}")
+    return total

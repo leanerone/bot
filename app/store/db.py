@@ -120,8 +120,17 @@ def get_conn() -> sqlite3.Connection:
             _conn.execute("PRAGMA journal_mode=WAL")
             _conn.execute("PRAGMA foreign_keys=ON")
             _conn.executescript(_SCHEMA)
+            _migrate()
             _seed_default_users()
         return _conn
+
+
+def _migrate() -> None:
+    """轻量迁移: 老库补列 (C3 令牌绑定 UA)。"""
+    cols = {r["name"] for r in _conn.execute("PRAGMA table_info(auth_tokens)").fetchall()}
+    if "ua_hash" not in cols:
+        _conn.execute("ALTER TABLE auth_tokens ADD COLUMN ua_hash TEXT NOT NULL DEFAULT ''")
+        _conn.commit()
 
 
 def _seed_default_users() -> None:
@@ -234,7 +243,8 @@ def authenticate(username: str, password: str) -> Optional[Dict[str, Any]]:
 
 # ── 登录令牌 ──
 
-def issue_token(user_id: str, ttl_hours: Optional[float] = None) -> tuple:
+def issue_token(user_id: str, ttl_hours: Optional[float] = None,
+                ua_hash: str = "") -> tuple:
     from app.store.security import new_token
     ttl = float(ttl_hours if ttl_hours is not None else cfg("auth.token_ttl_hours", 24))
     token = new_token()
@@ -242,18 +252,22 @@ def issue_token(user_id: str, ttl_hours: Optional[float] = None) -> tuple:
     with _lock:
         conn = get_conn()
         conn.execute(
-            "INSERT INTO auth_tokens(token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
-            (token, user_id, _now(), expires),
+            "INSERT INTO auth_tokens(token, user_id, created_at, expires_at, ua_hash)"
+            " VALUES (?,?,?,?,?)",
+            (token, user_id, _now(), expires, ua_hash or ""),
         )
         conn.execute("DELETE FROM auth_tokens WHERE expires_at < ?", (_now(),))
         conn.commit()
     return token, expires
 
 
-def resolve_token(token: str) -> Optional[Dict[str, Any]]:
+def resolve_token(token: str, ua_hash: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """ua_hash 传入时校验浏览器指纹 (C3): 不一致视为令牌失效, 需重新登录。"""
     conn = get_conn()
     row = conn.execute("SELECT * FROM auth_tokens WHERE token = ?", (token,)).fetchone()
     if not row or row["expires_at"] < _now():
+        return None
+    if ua_hash is not None and row["ua_hash"] and row["ua_hash"] != ua_hash:
         return None
     user = get_user_by_id(row["user_id"])
     if not user or user["disabled"]:

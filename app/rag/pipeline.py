@@ -11,8 +11,9 @@ from __future__ import annotations
 from typing import Generator, List, Optional, Tuple
 
 from app.config import cfg
+from app.guard.prompt_guard import wrap_context
 from app.llm.client import get_llm
-from app.llm.prompts import RAG_SYSTEM, clean_history
+from app.llm.prompts import RAG_SYSTEM, compress_history
 from app.rag.bm25 import BM25Index
 from app.rag.embedder import get_embedder
 from app.rag.ingest import get_store
@@ -67,26 +68,36 @@ def _retrieve(question: str, top_k: Optional[int] = None) -> Tuple[Optional[str]
             entry["rrf"] += 1.0 / (_RRF_K + rank + 1)
 
     top = sorted(merged.values(), key=lambda e: -e["rrf"])[:k]
+    # E1: RRF 粗排后 rerank 精排 (provider=off 时规则降级, 不阻塞)
+    from app.rag.rerank import rerank_hits
+
+    top = rerank_hits(question, [
+        {"source": e["meta"]["source"], "text": e["meta"]["text"],
+         "score": round(e["rrf"], 4), "meta": e["meta"]} for e in top
+    ], top_n=k)
     hits = [
         {
-            "source": e["meta"]["source"],
-            "text": e["meta"]["text"],
-            "score": round(e["rrf"], 4),
+            "source": h["source"],
+            "text": h["text"],
+            "score": h["score"],
+            "link": h["meta"].get("link", ""),   # B5: Notes doclink 回链
         }
-        for e in top
+        for h in top
     ]
     context = "\n\n".join(f"[{i + 1}] 来源: {h['source']}\n{h['text']}" for i, h in enumerate(hits))
     sources = [
         {"idx": i + 1, "source": h["source"], "score": h["score"],
-         "excerpt": h["text"][:120], "text": h["text"]}
+         "excerpt": h["text"][:120], "text": h["text"],
+         **({"link": h["link"]} if h["link"] else {})}
         for i, h in enumerate(hits)
     ]
     return context, sources
 
 
 def _build_messages(question: str, history, context: str) -> List[dict]:
-    messages = [{"role": "system", "content": RAG_SYSTEM.format(context=context)}]
-    messages.extend(clean_history(history))
+    # C1 间接注入防护: 检索资料包进"资料非指令"信任边界 (OWASP LLM01 纵深第 2 层)
+    messages = [{"role": "system", "content": RAG_SYSTEM.format(context=wrap_context(context))}]
+    messages.extend(compress_history(history))  # E3: 长会话自动压缩
     messages.append({"role": "user", "content": question})
     return messages
 
