@@ -47,6 +47,11 @@ notify:
 store:
   db_path: data/app.db
 auth:
+  jwt:                                # AIWEB 签发的 JWT 身份桥 (Hub Phase 1)
+    enabled: false                    # true=接受 AIWEB JWT (HS256 共享密钥)
+    secret: ""                        # 与 AIWEB 一致的签名密钥
+    issuer: "aiweb"
+    auto_provision: viewer            # 自动建档角色 (域账号首登自动创建)
   token_ttl_hours: 24
   cookie_secure: false
   trusted_proxies: []            # B2: 可信反代 IP 列表; 仅这些直连来源才采信 X-Forwarded-For

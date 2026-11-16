@@ -260,6 +260,27 @@ def set_password(user_id: str, password: str) -> None:
         revoke_user_tokens(user_id)
 
 
+def provision_user(username: str, role: str = "viewer",
+                   display_name: str = "") -> Dict[str, Any]:
+    """域/SSO 账号自动建档: 随机不可登录口令, 仅作身份映射 (Hub 身份桥)。"""
+    existing = get_user_by_username(username)
+    if existing:
+        return existing
+    from app.store.security import hash_password
+    import secrets as _secrets
+
+    with _lock:
+        conn = get_conn()
+        uid = f"u_{username}_{int(datetime.now().timestamp())}"
+        conn.execute(
+            "INSERT INTO users(id, username, pw_hash, role, display_name, created_at) VALUES (?,?,?,?,?,?)",
+            (uid, username, hash_password(_secrets.token_urlsafe(32)), role,
+             display_name or username, _now()),
+        )
+        conn.commit()
+    return get_user_by_username(username)
+
+
 def authenticate(username: str, password: str) -> Optional[Dict[str, Any]]:
     user = get_user_by_username(username)
     if not user or user["disabled"]:

@@ -46,7 +46,19 @@ E2 意图模型化 / E3 上下文压缩 / C1-C5 安全纵深; v4.4.1 两轮修�
 
 | 阶段 | 内容 | 前置 | 状态 (2026-11-16) |
 |---|---|---|---|
-| Hub Phase 1（对应 §十二 1~5） | AIWEB 侧 skill 运行时骨架 + Agent 接入 BOT MCP 工具 + **AIWEB JWT 身份桥** + 前端 Vitest + 文档漂移修复 | BOT 侧 MCP Server 就绪 | **BOT 侧前置已完成** (MCP 7 工具 + envelope + 密钥头, 冒烟 7/7); AIWEB 侧与 JWT 身份桥**未实现** (BOT 无 jwt 代码), 全链路未打通 |
+| Hub Phase 1（对应 §十二 1~5） | AIWEB 侧 skill 运行时骨架 + Agent 接入 BOT MCP 工具 + **AIWEB JWT 身份桥** + 前端 Vitest + 文档漂移修复 | BOT 侧 MCP Server 就绪 | **BOT 侧全部就绪** (MCP 7 工具 + envelope + 密钥头, 冒烟 7/7); **JWT 身份桥已落地** (2026-11-17, bots 分支: HS256 校验+自动建档 viewer+过期/签名拒绝, 5 测试); AIWEB 侧接入待 AIWEB 团队执行 |
 | Hub Phase 2（§九 Phase 2） | MCP 连接器（Oracle/MES/EAP）+ 桌面轻壳套 AIWEB 前端 | Phase 1 验收 | **未实现** (现数据源仍为演示库/只读中间库接口预留) |
 | BOT 生产化 | 真实 MES 中间库 / SSO / Postgres 迁移 / 评测集真实问题扩充 | 用户反馈 + IT 配合 | 未开始 (接口已隔离, 见 README 生产化清单) |
 | 长期 | fab-twin-pro 孪生模块、窄任务 LoRA、learn 内容内化 | 按需 | **未启动** |
+
+### W 阶段（Bots 工作台, 借鉴 OpenMausBot）—— 2026-11-16 夜, 分支 `bots`
+
+- **MAUS_BORROW.md** 借鉴分析（借 bots-as-contacts/决策分类/活动流/DESIGN 规则格式；不借云 VM 运行时/Undo 替代确认）+ **DESIGN_RULES.md** 设计规则 v1.0
+- **Bot 注册表**：4 专精 bots（小艺·工艺 / 小析·数据 / 小警·值守 / 小档·知识），persona 系统提示注入（chat/rag/text2sql 全链路 bot_id）
+- **桌面侧栏联系人区**（身份色/emoji/职责）+ Chat 头部 bot 身份条 + 工作台 Bots 网格
+- **决策日志分类**（借 OpenMausBot decision-log 枚举）：audit.decision 列 + 迁移 + auto-approved/auto-denied 埋点
+- 143 测试全绿（+5 bots/决策回归）
+
+### 身份桥（Hub Phase 1 BOT 侧缺口）—— 本阶段施工项
+
+ROADMAP 表中"AIWEB JWT 身份桥 **未实现**"即本阶段任务：BOT 增加 AIWEB JWT 校验（HS256 共享密钥 + 自动建档 viewer），与内置账号并存。
