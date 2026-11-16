@@ -15,10 +15,12 @@ from app.config import cfg
 
 _hits: dict = defaultdict(deque)
 _lock = threading.Lock()
+_calls = 0  # 惰性清扫计数器: 避免长期运行下空/过期键残留导致内存缓涨
 
 
 def _hit(key: str, limit: int, window_s: int) -> bool:
     """True=放行, False=超限。"""
+    global _calls
     now = time.time()
     with _lock:
         dq = _hits[key]
@@ -27,6 +29,11 @@ def _hit(key: str, limit: int, window_s: int) -> bool:
         if len(dq) >= limit:
             return False
         dq.append(now)
+        _calls += 1
+        if _calls % 512 == 0:  # 每 512 次放行顺手清扫一次过期键
+            stale = [k for k, d in _hits.items() if not d or d[-1] < now - 600]
+            for k in stale:
+                _hits.pop(k, None)
         return True
 
 

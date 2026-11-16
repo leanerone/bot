@@ -37,3 +37,7 @@ data/*.db-journal
 data/watcher_state.json
 data/notes_export/
 **/shell.log
+
+# 本地配置备份 (admin_config 自动生成, 可能含明文密钥)
+*.yaml.bak
+*.yml.bak

@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 from pathlib import Path
 from typing import Any, Dict, List
@@ -26,12 +27,22 @@ class LocalVectorStore:
         if self.meta_file.exists() and self.vec_file.exists():
             self.metas = json.loads(self.meta_file.read_text(encoding="utf-8"))
             self.vectors = np.load(self.vec_file)
+            # 崩溃残留自洽: 两文件条数取交集, 避免 metas 与 vectors 错位导致越界
+            n = min(len(self.metas), int(self.vectors.shape[0]))
+            if n != len(self.metas) or n != self.vectors.shape[0]:
+                self.metas = self.metas[:n]
+                self.vectors = self.vectors[:n]
         self._keys = {self._key(m) for m in self.metas}
 
     @staticmethod
     def _key(meta: Dict[str, Any]) -> str:
         """片段唯一键: 来源 + 正文 (重复导入去重用)。"""
         return f"{meta.get('source', '')}|{meta.get('text', '')}"
+
+    def filter_new(self, metas: List[Dict[str, Any]]) -> List[int]:
+        """返回未入库片段的下标 (先过滤再嵌入, 省去对已有片段重复调 embedding)。"""
+        with self._lock:
+            return [i for i, m in enumerate(metas) if self._key(m) not in self._keys]
 
     def __len__(self) -> int:
         return len(self.metas)
@@ -59,8 +70,14 @@ class LocalVectorStore:
             return len(new_vecs)
 
     def save(self) -> None:
-        np.save(self.vec_file, self.vectors)
-        self.meta_file.write_text(json.dumps(self.metas, ensure_ascii=False), encoding="utf-8")
+        """原子写: 先落 .tmp 再 os.replace, 避免进程崩溃把向量库写坏一半。"""
+        tmp_vec = self.dir / "vectors.npy.tmp"
+        tmp_meta = self.dir / "meta.json.tmp"
+        with open(tmp_vec, "wb") as f:  # np.save 对文件对象不追加扩展名
+            np.save(f, self.vectors)
+        tmp_meta.write_text(json.dumps(self.metas, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp_vec, self.vec_file)  # 崩溃窗口: vectors 新 / metas 旧 -> 加载端钳制自洽
+        os.replace(tmp_meta, self.meta_file)
 
     def _normalized(self) -> np.ndarray:
         if self._matrix is None:

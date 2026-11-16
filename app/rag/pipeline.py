@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import threading
 from typing import Generator, List, Optional, Tuple
 
 from app.config import cfg
@@ -22,18 +23,24 @@ _EMPTY_HINT = "知识库为空。请先调用 POST /api/kb/ingest 导入文档 (
 
 _bm25: Optional[BM25Index] = None
 _bm25_len = -1
+_bm25_lock = threading.Lock()
 
 _RRF_K = 60
 
 
 def _bm25_index() -> BM25Index:
-    """BM25 索引随向量库规模自动重建 (增量导入后 len 变化触发)。"""
+    """BM25 索引随向量库规模自动重建 (增量导入后 len 变化触发)。
+
+    双检锁: 并发请求同时发现 len 变化时只重建一次, 避免全量重复劳动。"""
     global _bm25, _bm25_len
     store = get_store()
     if _bm25 is None or _bm25_len != len(store):
-        _bm25 = BM25Index()
-        _bm25.build([m["text"] for m in store.metas])
-        _bm25_len = len(store)
+        with _bm25_lock:
+            if _bm25 is None or _bm25_len != len(store):
+                index = BM25Index()
+                index.build([m["text"] for m in store.metas])
+                _bm25 = index
+                _bm25_len = len(store)
     return _bm25
 
 

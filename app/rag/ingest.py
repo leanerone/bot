@@ -152,7 +152,12 @@ def ingest_dir(kb_dir: str, store: Optional[LocalVectorStore] = None) -> Dict:
         if not chunks:
             continue
         rel = str(path.relative_to(root))
-        added += store.add(embedder.embed(chunks), [{"source": rel, "text": c} for c in chunks])
+        metas = [{"source": rel, "text": c} for c in chunks]
+        # 先按唯一键过滤已入库片段, 只对新增片段调 embedding (真实 embedding 服务下省成本)
+        new_idx = store.filter_new(metas)
+        if new_idx:
+            added += store.add(embedder.embed([chunks[i] for i in new_idx]),
+                               [metas[i] for i in new_idx])
         total += len(chunks)
         used.append(rel)
     return {"files": used, "chunks": total, "added": added, "errors": errors}

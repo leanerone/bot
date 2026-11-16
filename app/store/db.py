@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -292,7 +293,7 @@ def revoke_user_tokens(user_id: str) -> None:
 # ── 会话与消息 ──
 
 def create_chat_session(user_id: str, title: str) -> Dict[str, Any]:
-    session_id = f"c_{int(datetime.now().timestamp() * 1000)}_{abs(hash(title)) % 10000}"
+    session_id = f"c_{uuid.uuid4().hex[:12]}"  # 随机 ID: 时间戳+hash 截断同毫秒可碰撞
     with _lock:
         conn = get_conn()
         conn.execute(

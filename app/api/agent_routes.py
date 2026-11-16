@@ -6,24 +6,26 @@
 from __future__ import annotations
 
 import json
+import queue
+import threading
 import time
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.agent import loop as agent_loop
 from app.api import audit as audit_mod
 from app.api.deps import require_user
 from app.api.limits import check_rate
-from app.guard import prompt_guard
+from app.api.routes import _guard_scan  # C1 注入扫描: 与 /api/chat 共用同一实现
 
 router = APIRouter(prefix="/api/agent")
 
 
 class AgentIn(BaseModel):
-    question: str
+    question: str = Field(max_length=4000)  # 问题长度上限: 防超长 prompt 成本攻击
     session_id: Optional[str] = None
     history: Optional[List[dict]] = None
 
@@ -36,9 +38,9 @@ def _persist_agent(session_id: Optional[str], user: dict, question: str,
         session = db.get_chat_session(session_id, user_id=user["id"])
         if not session:
             raise HTTPException(404, "会话不存在或无权访问")
-        db.add_message(session["id"], "user", "", question)
     else:
         session = db.create_chat_session(user["id"], question[:20] or "Agent 会话")
+    db.add_message(session["id"], "user", "", question)  # 新旧会话统一落库用户提问
     db.add_message(session["id"], "assistant", "kb", result.get("answer", ""),
                    sources=result.get("sources"))
     return session["id"]
@@ -48,7 +50,7 @@ def _persist_agent(session_id: Optional[str], user: dict, question: str,
 def agent_chat(body: AgentIn, request: Request):
     user = require_user(request)
     check_rate(user["id"])
-    q = prompt_guard.sanitize(body.question.strip())
+    q = _guard_scan(user, body.question.strip(), "/api/agent/chat")
     if not q:
         raise HTTPException(400, "问题不能为空")
     t0 = time.time()
@@ -62,10 +64,14 @@ def agent_chat(body: AgentIn, request: Request):
 
 @router.post("/chat/stream")
 def agent_chat_stream(body: AgentIn, request: Request):
-    """SSE: meta -> agent_step* -> delta* -> done (sources 含引用)。"""
+    """SSE: meta -> agent_step*(执行中实时推送) -> delta* -> done (sources 含引用)。
+
+    工具循环在工作线程执行, 步骤事件经队列实时转发 —— 不再等 run_agent
+    返回后一次性回放, 真实 LLM 多步执行期间前端能看到步骤推进。
+    """
     user = require_user(request)
     check_rate(user["id"])
-    q = prompt_guard.sanitize(body.question.strip())
+    q = _guard_scan(user, body.question.strip(), "/api/agent/chat/stream")
     if not q:
         raise HTTPException(400, "问题不能为空")
 
@@ -74,24 +80,46 @@ def agent_chat_stream(body: AgentIn, request: Request):
 
     def gen():
         t0 = time.time()
-        steps_holder: list = []
+        events: "queue.Queue[dict]" = queue.Queue()
+        result_holder: dict = {}
+        error_holder: list = []
+        n_steps = 0
+
+        def on_step(ev: dict) -> None:
+            events.put({"kind": "step", "ev": ev})
+
+        def work() -> None:
+            try:
+                result_holder["r"] = agent_loop.run_agent(
+                    q, history=body.history, user=user["username"], on_step=on_step)
+            except Exception as exc:  # noqa: BLE001
+                error_holder.append(exc)
+            finally:
+                events.put({"kind": "done"})
+
+        threading.Thread(target=work, daemon=True).start()
         try:
             yield sse("meta", {"type": "agent"})
-
-            def on_step(ev: dict) -> None:
-                steps_holder.append(ev)
-
-            result = agent_loop.run_agent(q, history=body.history,
-                                          user=user["username"], on_step=on_step)
-            for ev in steps_holder:
-                yield sse("agent_step", ev)
+            while True:
+                try:
+                    item = events.get(timeout=15)
+                except queue.Empty:
+                    yield sse("ping", {"t": int(time.time() * 1000)})  # 保活, 防代理空闲断流
+                    continue
+                if item["kind"] == "done":
+                    break
+                n_steps += 1
+                yield sse("agent_step", item["ev"])
+            if error_holder:
+                raise error_holder[0]
+            result = result_holder["r"]
             sid = _persist_agent(body.session_id, user, q, result)
             for chunk in _chunked(result.get("answer", "")):
                 yield sse("delta", {"text": chunk})
             yield sse("done", {"sources": result.get("sources", []),
                                "steps": result.get("steps", []), "session_id": sid})
             audit_mod.record(user["username"], "/api/agent/chat/stream",
-                             f"agent({len(steps_holder)}步)", q,
+                             f"agent({n_steps}步)", q,
                              int((time.time() - t0) * 1000))
         except Exception as exc:  # noqa: BLE001
             yield sse("error", {"message": f"服务异常: {exc}"})

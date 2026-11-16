@@ -90,16 +90,43 @@ class _LocalReranker:
         return out
 
 
+_reranker = None
+_reranker_key: tuple = ()
+_failed_keys: set = set()
+
+
 def get_reranker():
+    """按 (provider, model, base_url) 指纹缓存实例 —— local 模型加载与 vllm
+    连接都是秒级开销, 每次检索重建会拖垮问答延迟。构建失败 (如 local 模型
+    缺失) 的配置键记录后直接降级 off, 避免每个请求重复付出加载代价;
+    远端调用失败不在缓存层处理 (由 rerank_hits 逐次降级, 服务恢复即自动回归)。"""
+    global _reranker, _reranker_key
     provider = cfg("rag.rerank.provider", "off")
     model = cfg("rag.rerank.model", "BAAI/bge-reranker-v2-m3")
-    if provider == "vllm":
-        return _VllmReranker(
-            cfg("rag.rerank.base_url", cfg("llm.base_url", "http://127.0.0.1:8000/v1")),
-            cfg("llm.api_key", "EMPTY"), model)
-    if provider == "local":
-        return _LocalReranker(model)
-    return _OffReranker()
+    base_url = cfg("rag.rerank.base_url", cfg("llm.base_url", "http://127.0.0.1:8000/v1"))
+    key = (provider, model, base_url)
+    if key in _failed_keys:
+        return _OffReranker()
+    if _reranker is not None and _reranker_key == key:
+        return _reranker
+    try:
+        if provider == "vllm":
+            instance = _VllmReranker(base_url, cfg("llm.api_key", "EMPTY"), model)
+        elif provider == "local":
+            instance = _LocalReranker(model)
+        else:
+            instance = _OffReranker()
+    except Exception:
+        _failed_keys.add(key)
+        return _OffReranker()
+    try:  # 换配置时释放旧 vllm 连接池
+        old = _reranker
+        if old is not None and getattr(old, "name", "") == "vllm":
+            old._client.close()
+    except Exception:
+        pass
+    _reranker, _reranker_key = instance, key
+    return instance
 
 
 def rerank_hits(query: str, hits: List[dict], top_n: Optional[int] = None) -> List[dict]:

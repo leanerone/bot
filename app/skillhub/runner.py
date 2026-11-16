@@ -77,6 +77,37 @@ def _validate(s: Dict[str, Any]) -> Optional[str]:
     return None
 
 
+def _shrink_output(data: Any) -> Any:
+    """受控截断: 按结构收缩 (list 减半 / dict 内最大 list 减半) 而非硬切字符串,
+    保证结果始终是合法 JSON。收缩到底仍超限时降级为摘要对象。"""
+    payload = data
+    for _ in range(32):  # 减半策略指数收敛, 上限兜底
+        try:
+            dumped = json.dumps(payload, ensure_ascii=False, default=str)
+        except Exception:
+            return {"truncated": True, "preview": str(payload)[:500]}
+        if len(dumped) <= OUTPUT_MAX_CHARS:
+            return payload
+        if isinstance(payload, list):
+            if len(payload) <= 1:
+                break
+            payload = payload[: max(1, len(payload) // 2)]
+        elif isinstance(payload, dict):
+            big_key = None
+            big_len = 0
+            for k, v in payload.items():
+                if isinstance(v, (list, dict)) and len(v) > big_len:
+                    big_key, big_len = k, len(v)
+            if not big_key:
+                break
+            v = payload[big_key]
+            payload = {**payload, big_key: v[: max(1, len(v) // 2)]}
+        else:
+            break
+    preview = json.dumps(payload, ensure_ascii=False, default=str)[:500]
+    return {"truncated": True, "preview": preview}
+
+
 def run_skill(name: str, user: str = "system",
               args: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """执行一个 skill: 校验 → 调用其声明的工具 → 审计。"""
@@ -108,11 +139,14 @@ def run_skill(name: str, user: str = "system",
     else:
         result = holder.get("r", {"ok": False, "error": "无结果"})
 
-    # 输出截断 (受控执行)
+    # 输出截断 (受控执行): 结构化收缩, 避免 loads(dumps[:n]) 产生非法 JSON
     data = result.get("data")
     if isinstance(data, (dict, list)):
-        data = json.loads(json.dumps(data, ensure_ascii=False)[:OUTPUT_MAX_CHARS] or "{}")
-        result["data"] = data
+        try:
+            if len(json.dumps(data, ensure_ascii=False, default=str)) > OUTPUT_MAX_CHARS:
+                result["data"] = _shrink_output(data)
+        except Exception:
+            result["data"] = {"truncated": True, "preview": str(data)[:500]}
     audit_record(user, f"/skillhub/run/{name}", "skill",
                  f"tool={mcp_tool}; args={json.dumps(merged, ensure_ascii=False)[:120]}",
                  0, status="ok" if result.get("ok") else "fail")

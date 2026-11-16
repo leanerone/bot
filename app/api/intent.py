@@ -65,12 +65,20 @@ _MODEL_SYSTEM = """你是工厂助手的意图分类器。把用户问题分为�
 
 
 def classify_smart(question: str, threshold: int = DEFAULT_THRESHOLD) -> dict:
-    """E2: 真实 LLM 走模型分类 (温度 0, 超时/低置信回退关键词); mock 恒走关键词。"""
+    """E2: 真实 LLM 走模型分类 (温度 0, 超时/低置信回退关键词); mock 恒走关键词。
+
+    短路优化: 关键词得分远离阈值 (|score - threshold| >= margin) 时直接采信
+    关键词结果, 只有临界问法才调模型 —— 意图分类发生在流式首事件之前,
+    省掉这一次 LLM 往返就是省掉首字节延迟。margin 可经 intent.model_margin 配置。
+    """
     from app.config import cfg as _cfg
 
     base = classify(question, threshold)
     if _cfg("llm.mock", True):
         return base
+    margin = int(_cfg("intent.model_margin", 2))
+    if abs(base["score"] - threshold) >= margin:
+        return {**base, "via": "keyword"}
     try:
         from app.llm.client import get_llm
 

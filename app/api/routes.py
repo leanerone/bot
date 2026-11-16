@@ -12,7 +12,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.adapters.hcl_notes import (ingest_notes_domino, ingest_notes_domino_multi,
                                     ingest_notes_export)
@@ -43,7 +43,7 @@ def _guard_scan(user: dict, q: str, api: str) -> str:
 
 
 class AskIn(BaseModel):
-    question: str
+    question: str = Field(max_length=4000)  # 问题长度上限: 防超长 prompt 成本攻击
     session_id: Optional[str] = None
     history: Optional[List[dict]] = None
 
@@ -291,12 +291,19 @@ def feedback(body: FeedbackIn, request: Request):
 # ── 知识库 ──
 
 def _safe_kb_dir(path: Optional[str], default: str) -> str:
-    """知识导入路径白名单: 必须位于项目根目录内 (防路径穿越)。"""
+    """知识导入路径白名单: 必须位于项目根目录内 (防路径穿越)。
+
+    用 relative_to 而非 startswith —— 后者对同级前缀目录 (如 bot-other) 误放行。
+    """
     target = abs_path(path or default).resolve()
     root = ROOT.resolve()
-    if not str(target).startswith(str(root)):
+    if target != root and root not in target.parents:
         raise HTTPException(400, "路径越界: 只允许导入项目目录内的文档")
     return str(target)
+
+
+# 拖拽上传上限: 原始文件 10MB (base64 约膨胀 4/3)
+MAX_UPLOAD_B64_CHARS = 14_000_000
 
 
 class UploadIn(BaseModel):
@@ -314,6 +321,8 @@ def kb_upload(request: Request, body: UploadIn):
     name = Path(body.name).name  # 防路径穿越
     if not name.lower().endswith((".md", ".txt", ".docx", ".pdf")):
         raise HTTPException(400, "仅支持 .md/.txt/.docx/.pdf")
+    if len(body.b64) > MAX_UPLOAD_B64_CHARS:
+        raise HTTPException(413, "文件过大 (原始文件上限 10MB)")
     target_dir = abs_path(cfg("rag.knowledge_path", "data/knowledge"))
     target_dir.mkdir(parents=True, exist_ok=True)
     target = target_dir / f"{uuid.uuid4().hex[:6]}_{name}"

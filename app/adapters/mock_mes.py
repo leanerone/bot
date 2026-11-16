@@ -17,12 +17,33 @@ from app.sqlbot.schema import DEMO_DDL
 
 DEMO_DB = abs_path("data/demo/fab_demo.db")
 
+_DEMO_TABLES = ("eqp", "wip", "yield_daily", "alarms")
+
+
+def _demo_db_ready(db_path: Path) -> bool:
+    """库文件存在且四张表齐全 (0 字节/半建表的残留文件视为未就绪, 防止污染后续启动)。"""
+    if not db_path.exists() or db_path.stat().st_size == 0:
+        return False
+    try:
+        conn = sqlite3.connect(str(db_path))
+        try:
+            placeholders = ",".join("?" for _ in _DEMO_TABLES)
+            row = conn.execute(
+                f"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ({placeholders})",
+                _DEMO_TABLES,
+            ).fetchone()
+            return row[0] == len(_DEMO_TABLES)
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return False
+
 
 def seed_demo_db(db_path: Optional[Path] = None, force: bool = False) -> Path:
     db_path = Path(db_path) if db_path else DEMO_DB
     if force and db_path.exists():
         db_path.unlink()  # 强制重种: 直接删除旧库文件, 避免表冲突
-    if db_path.exists():
+    if db_path.exists() and _demo_db_ready(db_path):
         return db_path
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
@@ -92,6 +113,7 @@ class MockMESAdapter(MESAdapter):
 
     def __init__(self, db_path: Optional[Path] = None):
         self.db_path = Path(db_path) if db_path else DEMO_DB
+        seed_demo_db(self.db_path)  # 幂等: 未建表/空文件自动补种 (防止 connect 产出 0 字节毒化库)
 
     def get_lot(self, lot_id: str) -> Optional[Dict[str, Any]]:
         conn = sqlite3.connect(str(self.db_path))

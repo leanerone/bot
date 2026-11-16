@@ -209,13 +209,17 @@ def ingest_notes_export(export_dir: str, store: Optional[LocalVectorStore] = Non
     size = int(cfg("rag.chunk_size", 500))
     overlap = int(cfg("rag.chunk_overlap", 80))
     if items:
-        vectors, metas = [], []
+        metas: List[Dict[str, Any]] = []
         for label, text in items:
             for chunk in chunk_text(text, size=size, overlap=overlap):
-                vectors.extend(embedder.embed([chunk]))
                 metas.append({"source": label, "text": chunk})
                 chunks_total += 1
-        store.add(vectors, metas)
+        # 批量嵌入 (每 chunk 一次 HTTP 会把 Domino 全量拉取变成数千次串行请求);
+        # 先过滤已入库片段, 重复导入不再重复付费
+        new_idx = store.filter_new(metas)
+        if new_idx:
+            vectors = embedder.embed([metas[i]["text"] for i in new_idx])
+            store.add(vectors, [metas[i] for i in new_idx])
     return {"docs": len(docs), "chunks": chunks_total,
             "attachments": att_count, "links": link_count, "errors": errors}
 
@@ -278,7 +282,7 @@ def ingest_notes_domino(client: DominoNotesClient, store: Optional[LocalVectorSt
     if store is None:
         store = get_store()
     embedder = embedder or get_embedder()
-    vectors, metas = [], []
+    metas: List[Dict[str, Any]] = []
     chunks_total = 0
     errors: List[str] = []
     size = int(cfg("rag.chunk_size", 500))
@@ -293,12 +297,15 @@ def ingest_notes_domino(client: DominoNotesClient, store: Optional[LocalVectorSt
         label = doc.source_label()
         link = doc.doclink()
         for chunk in chunk_text(f"{doc.subject}\n\n{text}", size=size, overlap=overlap):
-            vectors.extend(embedder.embed([chunk]))
             metas.append({"source": label, "text": chunk,
                           "notes_unid": doc.unid, "link": link})
             chunks_total += 1
-    if vectors:
-        store.add(vectors, metas)
+    if metas:
+        # 批量嵌入: 每 chunk 单次请求会把全量拉取放大为数千次串行 HTTP
+        new_idx = store.filter_new(metas)
+        if new_idx:
+            vectors = embedder.embed([metas[i]["text"] for i in new_idx])
+            store.add(vectors, [metas[i] for i in new_idx])
     return {"docs": doc_count, "chunks": chunks_total, "skipped": len(skip),
             "attachments": 0, "links": 0, "errors": errors}
 
