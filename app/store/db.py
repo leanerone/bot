@@ -81,7 +81,8 @@ CREATE TABLE IF NOT EXISTS audit(
   intent TEXT DEFAULT '',
   question TEXT DEFAULT '',
   ms INTEGER DEFAULT 0,
-  status TEXT DEFAULT 'ok'
+  status TEXT DEFAULT 'ok',
+  decision TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS tasks(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -146,10 +147,14 @@ def get_conn() -> sqlite3.Connection:
 
 
 def _migrate() -> None:
-    """轻量迁移: 老库补列 (C3 令牌绑定 UA)。"""
+    """轻量迁移: 老库补列 (C3 令牌绑定 UA + W4 审计决策分类)。"""
     cols = {r["name"] for r in _conn.execute("PRAGMA table_info(auth_tokens)").fetchall()}
     if "ua_hash" not in cols:
         _conn.execute("ALTER TABLE auth_tokens ADD COLUMN ua_hash TEXT NOT NULL DEFAULT ''")
+        _conn.commit()
+    audit_cols = {r["name"] for r in _conn.execute("PRAGMA table_info(audit)").fetchall()}
+    if "decision" not in audit_cols:
+        _conn.execute("ALTER TABLE audit ADD COLUMN decision TEXT DEFAULT ''")
         _conn.commit()
 
 
@@ -490,12 +495,13 @@ def message_owner(message_id: int) -> Optional[str]:
 # ── 审计 ──
 
 def log_audit(user: str, api: str, intent: str, question: str, ms: int,
-              status: str = "ok") -> None:
+              status: str = "ok", decision: str = "") -> None:
     with _lock:
         conn = get_conn()
         conn.execute(
-            "INSERT INTO audit(ts, user, api, intent, question, ms, status) VALUES (?,?,?,?,?,?,?)",
-            (_now(), user, api, intent, question[:200], ms, status),
+            "INSERT INTO audit(ts, user, api, intent, question, ms, status, decision) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (_now(), user, api, intent, question[:200], ms, status, decision),
         )
         conn.commit()
 

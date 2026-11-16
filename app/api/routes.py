@@ -116,12 +116,15 @@ def chat(body: AskIn, request: Request):
         else:
             result = {"type": "kb", **pipeline.ask(q, history=body.history, bot_id=body.bot_id)}
     except SQLRejected as exc:
+        audit_mod.record(user["username"], "/api/chat", "sql", q,
+                         int((time.time() - t0) * 1000), status="rejected", decision="auto-denied")
         raise HTTPException(400, f"SQL 安全校验未通过: {exc}") from exc
     except LLMError as exc:
         raise HTTPException(503, str(exc)) from exc
+    decision = "auto-approved" if result.get("type") == "sql" else ""
     mid = _persist_answer(session["id"], result)
     audit_mod.record(user["username"], "/api/chat", result.get("type"), q,
-                     int((time.time() - t0) * 1000))
+                     int((time.time() - t0) * 1000), decision=decision)
     return {"session_id": session["id"], "assistant_message_id": mid, **result}
 
 
@@ -145,6 +148,7 @@ def chat_stream(body: AskIn, request: Request):
         intent = "kb"
         result_holder: dict = {}
         persisted = False
+        decision = ""
         try:
             if classify_smart(q)["intent"] == "sql":
                 intent = "sql"
@@ -172,19 +176,22 @@ def chat_stream(body: AskIn, request: Request):
                 persisted = True
                 yield sse("done", {"sources": sources, "message_id": mid})
         except SQLRejected as exc:
+            decision = "auto-denied"
             yield sse("error", {"message": f"SQL 安全校验未通过: {exc}"})
         except LLMError as exc:
             yield sse("error", {"message": str(exc)})
         except Exception as exc:  # 兜底: 流式链路不让服务挂掉
             yield sse("error", {"message": f"服务异常: {exc}"})
         finally:
+            if intent == "sql" and result_holder.get("type") == "sql":
+                decision = decision or "auto-approved"
             if result_holder and not persisted:
                 try:
                     _persist_answer(session["id"], result_holder)
                 except Exception:
                     pass
             audit_mod.record(user["username"], "/api/chat/stream", intent, q,
-                             int((time.time() - t0) * 1000))
+                             int((time.time() - t0) * 1000), decision=decision)
 
     return StreamingResponse(
         gen(),
@@ -228,7 +235,7 @@ def data_query(body: AskIn, request: Request):
         result = {"type": "sql", **text2sql.query(q, history=body.history)}
     except SQLRejected as exc:
         audit_mod.record(user["username"], "/api/data/query", "sql", q,
-                         int((time.time() - t0) * 1000), status="rejected")
+                         int((time.time() - t0) * 1000), status="rejected", decision="auto-denied")
         raise HTTPException(400, f"SQL 安全校验未通过: {exc}") from exc
     if body.session_id:
         session = db.get_chat_session(body.session_id, user_id=user["id"])
@@ -240,7 +247,7 @@ def data_query(body: AskIn, request: Request):
                          int((time.time() - t0) * 1000))
         return {"session_id": session["id"], "assistant_message_id": mid, **result}
     audit_mod.record(user["username"], "/api/data/query", "sql", q,
-                     int((time.time() - t0) * 1000))
+                     int((time.time() - t0) * 1000), decision="auto-approved")
     return result
 
 
