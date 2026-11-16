@@ -292,3 +292,4 @@
 - K-GATE6 (04:28): exit=0
 - K-GATE7 (04:59): exit=0
 - K-GATE8 (05:30): exit=0
+- K-GATE9 (06:01): exit=0
