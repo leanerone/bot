@@ -38,6 +38,13 @@ export interface ChatMsg {
 export interface Health { status: string; kb_chunks: number; version: string;
   llm: { mock: boolean; model: string; degraded?: boolean }; notes_mode: string }
 
+export interface Bot {
+  id: string; name: string; emoji: string; color: string;
+  tagline: string; tools?: string[];
+}
+
+export const getBots = () => getJSON<{ bots: Bot[] }>("/api/bots");
+
 export const getJSON = <T = any>(p: string) => api<T>(p);
 export const postJSON = <T = any>(p: string, body?: any) =>
   api<T>(p, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });

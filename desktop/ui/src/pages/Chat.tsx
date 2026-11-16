@@ -2,13 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import { Me, ChatMsg, SessionMeta, getJSON, postJSON, patchJSON, delJSON } from "../api";
 import { Modal, Switch } from "../components/ui";
 
+const botColor = (c?: string) => ({ blue: "#0A84FF", green: "#30D158", red: "#FF453A", orange: "#FF9500", purple: "#BF5AF2", cyan: "#64D2FF" }[c || "blue"] || "#0A84FF");
 const CHIPS = ["最近未处理的告警有哪些", "射频功率漂移怎么处理", "ETCH 区几台机台是 DOWN 的", "P1234 最近一周良率"];
 
 /* v4.4 重构: 当前会话消息统一存 messages 单一状态 (修复原"会话态/流式态"双源脱节),
    sessions 仅作侧栏列表; A1 流式缓冲+滚动跟随 / A2 代码复制 / A3 引用上标+Notes 回链 /
    A4 骨架屏与动效 / D3 Agent 模式步骤条 */
 
-export default function Chat({ me, initialSession }: { me: Me; initialSession?: string | null }) {
+export default function Chat({ me, initialSession, bot }: { me: Me; initialSession?: string | null; bot?: { id: string; name: string; emoji: string; color: string } | null }) {
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -271,7 +272,11 @@ export default function Chat({ me, initialSession }: { me: Me; initialSession?: 
       {/* 对话区 */}
       <div className="chat-col flex-1 min-w-0 flex flex-col">
         <div className="px-5 pb-2 header-hairline flex items-center">
-          <div className="font-semibold text-[15px]">{cur?.title || "新会话"}</div>
+          <div className="font-semibold text-[15px] flex items-center gap-2">
+            {bot && <span className="w-[7px] h-[7px] rounded-full" style={{ background: botColor(bot.color) }} />}
+            {cur?.title || "新会话"}
+            {bot && <span className="text-[11.5px] font-medium text-ios-label2">· 与 {bot.name} 对话</span>}
+          </div>
           {cur && <button className="ml-auto text-[12px] text-ios-label2 hover:text-current"
             onClick={() => exportMd(cur, messages)}>导出 Markdown</button>}
         </div>

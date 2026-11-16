@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Me, getJSON, postJSON, Health, SessionMeta } from "./api";
+import { Me, Bot, getJSON, getBots, postJSON, Health, SessionMeta } from "./api";
+import { IDENTITY } from "./lib/identity";
 import Login from "./pages/Login";
 import NotificationCenter from "./components/NotificationCenter";
 import Home from "./pages/Home";
@@ -52,6 +53,8 @@ export default function App() {
   const [collapsed, setCollapsed] = useState(false);
   const [sessions, setSessions] = useState<SessionMeta[]>([]);
   const [openSession, setOpenSession] = useState<string | null>(null);
+  const [bots, setBots] = useState<Bot[]>([]);
+  const [activeBot, setActiveBot] = useState<Bot | null>(null);
   const [brandOpen, setBrandOpen] = useState(false);
   const [brandPos, setBrandPos] = useState({ left: 12, top: 96 });
 
@@ -111,7 +114,7 @@ export default function App() {
 
   useEffect(() => {
     getJSON<{ user: Me }>("/api/auth/me")
-      .then(r => { setMe(r.user); refreshHealth(); })
+      .then(r => { setMe(r.user); refreshHealth(); getBots().then(b => setBots(b.bots)).catch(() => {}); })
       .catch(() => setMe(null))
       .finally(() => setAuthChecked(true));
   }, []);
@@ -204,6 +207,22 @@ export default function App() {
 
             {!collapsed && (
               <div className="nav-group">
+                <div className="nav-group-title">联系人 · Bots</div>
+                {bots.map(b => (
+                  <button key={b.id} type="button" className="nav-recent"
+                    title={b.tagline}
+                    onClick={() => { setActiveBot(b); go("chat"); }}>
+                    <span className="w-[18px] h-[18px] rounded-full grid place-items-center text-[10px] shrink-0"
+                      style={{ background: IDENTITY[b.color] || "#0A84FF" }}>{b.emoji}</span>
+                    <span className="truncate">{b.name}</span>
+                  </button>
+                ))}
+                {bots.length === 0 && <div className="nav-empty">加载中…</div>}
+              </div>
+            )}
+
+            {!collapsed && (
+              <div className="nav-group">
                 <div className="nav-group-title">最近会话 <span>({sessions.length})</span></div>
                 {sessions.length === 0
                   ? <div className="nav-empty">暂无会话</div>
@@ -241,7 +260,7 @@ export default function App() {
         <main className="flex-1 min-w-0 relative">
           <div key={view} className="view-enter">
             {view === "home" && <Home me={me} health={health} go={go} />}
-            {view === "chat" && <Chat me={me} initialSession={openSession} />}
+            {view === "chat" && <Chat me={me} initialSession={openSession} bot={activeBot} />}
             {view === "kb" && <Knowledge me={me} />}
             {view === "data" && <Data me={me} />}
             {view === "tasks" && <Tasks me={me} />}
