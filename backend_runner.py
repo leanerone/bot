@@ -19,14 +19,17 @@ os.environ.setdefault("FABBOT_PORT", "8100")
 (root / "knowledge").mkdir(parents=True, exist_ok=True)
 (root / "data").mkdir(parents=True, exist_ok=True)
 
-# 默认配置 (内嵌兜底; 与仓库 config.yaml 同构, 首次落位后用户可编辑)
+# 默认配置 (内嵌兜底; 与仓库 config.yaml 同构 v4.4, 首次落位后用户可编辑)
 DEFAULT_CONFIG = """# FabBot Desktop 默认配置 (由安装器生成, 可编辑)
 llm:
   mock: true
+  provider: openai
   base_url: "http://127.0.0.1:8000/v1"
   api_key: "EMPTY"
+  api_version: "2024-10-21"
   model: "Qwen2.5-32B-Instruct-AWQ"
   timeout: 120
+  fallback_mock: true
 
 rag:
   knowledge_path: "data/knowledge"
@@ -35,6 +38,10 @@ rag:
   chunk_overlap: 80
   top_k: 6
   hybrid: true
+  rerank:
+    provider: off
+    model: "BAAI/bge-reranker-v2-m3"
+    top_n: 6
   embedding:
     provider: mock
     base_url: "http://127.0.0.1:8001/v1"
@@ -46,6 +53,8 @@ sqlbot:
 
 audit:
   path: "data/audit.log"
+  mask_pii: true
+  max_text_len: 200
 
 store:
   db_path: "data/app.db"
@@ -53,6 +62,7 @@ store:
 auth:
   token_ttl_hours: 24
   cookie_secure: false
+  trusted_proxies: []
   bootstrap_users:
     - {username: admin,   password: admin123, role: admin,  display_name: 管理员}
     - {username: zhangsan, password: user123, role: user,   display_name: 张工}
@@ -67,20 +77,54 @@ notes:
     view: "($All)"
     username: ""
     password: ""
+  databases: []
+  sync:
+    interval_minutes: 0
 
 notify:
+  teams_webhook: ""
+  teams_format: connector
   wechat_webhook: ""
   dingtalk_webhook: ""
+  feishu_webhook: ""
+
+mcp:
+  require_key: false
+  key: ""
 
 ratelimit:
   chat_per_minute: 30
   login_per_5min: 10
 
+auth_lock:
+  max_failures: 5
+  window_minutes: 10
+  lock_minutes: 15
+  admin_per_minute: 3
+
+intent:
+  model_margin: 2
+  min_confidence: 0.6
+
+agent:
+  max_steps: 3
+
+skillhub:
+  secrets: {}
+  fernet_key: ""
+
+cors:
+  allow_origins: ["http://127.0.0.1:8100", "http://localhost:8100"]
+
+logging:
+  level: INFO
+  file: ""
+
 watcher:
   enabled: false
   interval_minutes: 10
   levels: [ALARM, CRITICAL]
-  platform: wechat
+  platform: teams
 """
 
 meipass = Path(getattr(sys, "_MEIPASS", base))

@@ -30,9 +30,9 @@ class NotesSyncDaemon(threading.Thread):
             if multi:
                 self.last_result = ingest_notes_domino_multi(multi)
             else:
-                from app.api.routes import _notes_domino_client
+                from app.adapters.hcl_notes import domino_client_from_config
 
-                self.last_result = ingest_notes_domino(_notes_domino_client())
+                self.last_result = ingest_notes_domino(domino_client_from_config())
         except Exception as exc:  # noqa: BLE001 —— 守护线程不允许挂掉
             self.last_result = {"errors": [f"同步失败 (可退回导出目录模式): {exc}"]}
         return self.last_result

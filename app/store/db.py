@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+import time
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -21,6 +22,18 @@ from app.config import abs_path, cfg
 _conn: Optional[sqlite3.Connection] = None
 _lock = threading.RLock()
 _override: Optional[Path] = None
+
+# B10: 令牌解析缓存 (认证最热路径, 每请求原需 2 条 SQL)。
+# TTL 仅作过期兜底; 任何鉴权变更 (禁用/改密/吊销/换库) 立即清缓存 → 保住"禁用即时生效"。
+_TOKEN_TTL_S = 60.0
+_token_cache: Dict[str, tuple] = {}  # token -> (user, expires_at, ua_hash, cached_ts)
+
+
+def _invalidate_token_cache(token: Optional[str] = None) -> None:
+    if token is None:
+        _token_cache.clear()
+    else:
+        _token_cache.pop(token, None)
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users(
@@ -82,6 +95,10 @@ CREATE TABLE IF NOT EXISTS tasks(
   done_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks(user_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit(ts);
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit(user);
+CREATE INDEX IF NOT EXISTS idx_tokens_user ON auth_tokens(user_id);
 """
 
 
@@ -100,6 +117,7 @@ def use(path) -> None:
     global _conn, _override
     close()
     _override = Path(path)
+    _invalidate_token_cache()
 
 
 def close() -> None:
@@ -108,6 +126,7 @@ def close() -> None:
         if _conn is not None:
             _conn.close()
             _conn = None
+    _invalidate_token_cache()
 
 
 def get_conn() -> sqlite3.Connection:
@@ -154,8 +173,9 @@ def _seed_default_users() -> None:
              a.get("role", "user"), a.get("display_name", ""), _now()),
         )
     _conn.commit()
-    print("[db] 已创建内置账号: " + ", ".join(f"{a['username']}({a.get('role')})" for a in accounts)
-          + " —— 上线后请立即修改默认密码")
+    from app.log import get_logger
+    get_logger("db").info("已创建内置账号: %s —— 上线后请立即修改默认密码",
+                          ", ".join(f"{a['username']}({a.get('role')})" for a in accounts))
 
 
 # ── 用户 ──
@@ -218,7 +238,10 @@ def update_user(user_id: str, role: Optional[str] = None, disabled: Optional[boo
         args.append(user_id)
         cur = conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", args)
         conn.commit()
-        return cur.rowcount > 0
+        changed = cur.rowcount > 0
+    if changed:
+        _invalidate_token_cache()  # 角色/禁用变更即时生效 (清令牌缓存)
+    return changed
 
 
 def set_password(user_id: str, password: str) -> None:
@@ -263,7 +286,20 @@ def issue_token(user_id: str, ttl_hours: Optional[float] = None,
 
 
 def resolve_token(token: str, ua_hash: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    """ua_hash 传入时校验浏览器指纹 (C3): 不一致视为令牌失效, 需重新登录。"""
+    """ua_hash 传入时校验浏览器指纹 (C3): 不一致视为令牌失效, 需重新登录。
+
+    B10: 命中缓存省去 token+user 两条 SQL; UA 校验仍逐请求执行。
+    缓存于任何鉴权变更时清空, 故禁用/改密/吊销即时生效 (单进程)。
+    """
+    now = time.time()
+    ent = _token_cache.get(token)
+    if ent is not None:
+        user, expires, cached_ua, ts = ent
+        if now - ts < _TOKEN_TTL_S and expires >= _now():
+            if ua_hash is not None and cached_ua and cached_ua != ua_hash:
+                return None
+            return None if user["disabled"] else user
+        _token_cache.pop(token, None)
     conn = get_conn()
     row = conn.execute("SELECT * FROM auth_tokens WHERE token = ?", (token,)).fetchone()
     if not row or row["expires_at"] < _now():
@@ -273,6 +309,7 @@ def resolve_token(token: str, ua_hash: Optional[str] = None) -> Optional[Dict[st
     user = get_user_by_id(row["user_id"])
     if not user or user["disabled"]:
         return None
+    _token_cache[token] = (user, row["expires_at"], row["ua_hash"], now)
     return user
 
 
@@ -281,6 +318,7 @@ def revoke_token(token: str) -> None:
         conn = get_conn()
         conn.execute("DELETE FROM auth_tokens WHERE token = ?", (token,))
         conn.commit()
+    _invalidate_token_cache(token)
 
 
 def revoke_user_tokens(user_id: str) -> None:
@@ -288,6 +326,7 @@ def revoke_user_tokens(user_id: str) -> None:
         conn = get_conn()
         conn.execute("DELETE FROM auth_tokens WHERE user_id = ?", (user_id,))
         conn.commit()
+    _invalidate_token_cache()
 
 
 # ── 会话与消息 ──

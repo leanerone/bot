@@ -6,6 +6,7 @@ SQLite 会话, 支持追问与历史回看。生产建议把关键词意图换�
 from __future__ import annotations
 
 import json
+import re
 import time
 from pathlib import Path
 from typing import List, Optional
@@ -22,7 +23,7 @@ from app.api.intent import classify_smart
 from app.api.limits import check_rate
 from app.config import ROOT, abs_path, cfg
 from app.guard import prompt_guard
-from app.llm.client import LLMError
+from app.llm.client import LLMError, degraded_status
 from app.rag import pipeline
 from app.rag.ingest import get_store, ingest_dir
 from app.store import db
@@ -326,6 +327,14 @@ def kb_upload(request: Request, body: UploadIn):
     target_dir = abs_path(cfg("rag.knowledge_path", "data/knowledge"))
     target_dir.mkdir(parents=True, exist_ok=True)
     target = target_dir / f"{uuid.uuid4().hex[:6]}_{name}"
+    # B7: 同名文档版本替换 —— 清掉旧版本 (uuid6_原名 或 legacy 原名) 的片段与文件,
+    # 否则更新版 SOP 上传后旧版残留, 检索可能引用过期规程 (工厂场景高风险)。
+    old_pat = re.compile(rf"(?:[0-9a-f]{{6}}_)?{re.escape(name)}")
+    store = get_store()
+    for old in target_dir.iterdir():
+        if old.is_file() and old != target and old_pat.fullmatch(old.name):
+            store.delete_by_source(old.name)
+            old.unlink()
     try:
         target.write_bytes(base64.b64decode(body.b64))
     except Exception as exc:
@@ -369,14 +378,9 @@ def kb_ingest_notes(request: Request, body: Optional[NotesIngestIn] = None):
 
 
 def _notes_domino_client():
-    from app.adapters.hcl_notes import DominoNotesClient
+    from app.adapters.hcl_notes import domino_client_from_config
 
-    return DominoNotesClient(
-        base_url=cfg("notes.domino.base_url", ""),
-        db_path=cfg("notes.domino.db_path", ""),
-        username=cfg("notes.domino.username", ""),
-        password=cfg("notes.domino.password", ""),
-    )
+    return domino_client_from_config()
 
 
 @router.get("/health")
@@ -384,7 +388,8 @@ def health():
     return {
         "status": "ok",
         "kb_chunks": len(get_store()),
-        "llm": {"mock": bool(cfg("llm.mock", True)), "model": cfg("llm.model", "")},
+        "llm": {"mock": bool(cfg("llm.mock", True)), "model": cfg("llm.model", ""),
+                "degraded": degraded_status()},  # B8: 云端故障降级态 (前端标黄)
         "notes_mode": cfg("notes.mode", "export"),
-        "version": "4.4.0",
+        "version": "4.4.1",
     }

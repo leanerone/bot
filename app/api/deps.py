@@ -10,10 +10,26 @@ from typing import Optional
 
 from fastapi import HTTPException, Request
 
+from app.config import cfg
 from app.store import db
 
 COOKIE_NAME = "fabbot_token"
 ROLE_RANK = {"viewer": 0, "user": 1, "admin": 2}
+
+
+def client_ip(request: Request) -> str:
+    """来源 IP: 仅当直连来自可信代理 (auth.trusted_proxies) 时才采信 X-Forwarded-For。
+
+    否则一律用直连 IP —— 防伪造 XFF 头绕过按 IP 的锁定/限流, 也避免反代后
+    所有用户共享代理 IP 导致的登录 DoS。
+    """
+    direct = request.client.host if request.client else "?"
+    trusted = cfg("auth.trusted_proxies", []) or []
+    if trusted and direct in trusted:
+        xff = request.headers.get("x-forwarded-for", "")
+        if xff:
+            return xff.split(",")[0].strip() or direct
+    return direct
 
 
 def _token_from(request: Request) -> Optional[str]:

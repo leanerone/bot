@@ -29,6 +29,9 @@ export default function Tasks({ me }: { me: Me }) {
   const [report, setReport] = useState<Report | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
   const [reportHours, setReportHours] = useState(12);
+  const [reportMsg, setReportMsg] = useState("");
+  const [exportBusy, setExportBusy] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
 
   const loadAlarms = async (h: number) => {
     setLoading(true);
@@ -59,9 +62,37 @@ export default function Tasks({ me }: { me: Me }) {
     loadTasks();
   };
   const genReport = async () => {
-    setReportBusy(true);
+    setReportBusy(true); setReportMsg("");
     try { setReport(await getJSON<Report>(`/api/tasks/shift-report?hours=${reportHours}`)); }
     finally { setReportBusy(false); }
+  };
+
+  /* B6: 导出 Word (.docx blob 下载) 与推送到 Teams */
+  const exportWord = async () => {
+    if (!report) return;
+    setExportBusy(true); setReportMsg("");
+    try {
+      const resp = await fetch(`/api/tasks/shift-report/export?hours=${report.hours}`);
+      if (!resp.ok) {
+        let detail = `HTTP ${resp.status}`;
+        try { detail = (await resp.json()).detail || detail; } catch { /* ignore */ }
+        throw new Error(detail);
+      }
+      const blob = await resp.blob();
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = `交班报告_${report.generated_at.slice(0, 10)}.docx`; a.click();
+      setReportMsg("✅ Word 已导出");
+    } catch (e: any) { setReportMsg("❌ " + e.message); }
+    finally { setExportBusy(false); }
+  };
+  const pushTeams = async () => {
+    if (!report) return;
+    setPushBusy(true); setReportMsg("");
+    try {
+      const r = await postJSON<any>("/api/tasks/shift-report/push", { hours: report.hours });
+      setReportMsg(`✅ 已推送到 ${r.platform || "teams"}`);
+    } catch (e: any) { setReportMsg("❌ 推送失败: " + e.message); }  // 400 (webhook 未配置) 展示后端 detail
+    finally { setPushBusy(false); }
   };
 
   const maxEqp = data ? Math.max(1, ...data.by_eqp.map(x => x[1])) : 1;
@@ -168,7 +199,7 @@ export default function Tasks({ me }: { me: Me }) {
       {reportBusy && <Spinner text="聚合告警/良率/WIP 数据…" />}
 
       {report && (
-        <Modal title={`交班报告（近 ${report.hours} 小时）`} onClose={() => setReport(null)} wide>
+        <Modal title={`交班报告（近 ${report.hours} 小时）`} onClose={() => { setReport(null); setReportMsg(""); }} wide>
           <div className="text-[12px] text-ios-label2 mb-2">
             生成于 {report.generated_at} · 未处理告警 {report.alarms.total_open} 条（CRITICAL {report.alarms.critical}）
           </div>
@@ -183,7 +214,12 @@ export default function Tasks({ me }: { me: Me }) {
               const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
               a.download = `交班报告_${report.generated_at.slice(0, 10)}.md`; a.click();
             }}>导出 .md</button>
+            <button className="ios-btn-ghost" disabled={exportBusy} onClick={exportWord}>
+              {exportBusy ? "导出中…" : "导出 Word"}</button>
+            <button className="ios-btn-ghost" disabled={pushBusy} onClick={pushTeams}>
+              {pushBusy ? "推送中…" : "推送到 Teams"}</button>
           </div>
+          {reportMsg && <div className="text-[12.5px] mt-2">{reportMsg}</div>}
         </Modal>
       )}
     </div>

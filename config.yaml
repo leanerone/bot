@@ -49,6 +49,7 @@ store:
 auth:
   token_ttl_hours: 24
   cookie_secure: false
+  trusted_proxies: []            # B2: 可信反代 IP 列表; 仅这些直连来源才采信 X-Forwarded-For
   bootstrap_users:
   - username: admin
     password: admin123
@@ -75,9 +76,8 @@ notes:
   databases: []                  # 例: [{db_path: KB/process.nsf, view: "($All)"}, {db_path: KB/dev.nsf}]
   sync:
     interval_minutes: 0          # >0 时启用定时增量同步守护 (0=关闭)
-  domino_sync_since_days: 30     # 增量拉取回看窗口
 mcp:
-  require_key: false             # streamable-http 模式要求 X-FabBot-Key 头
+  require_key: false             # streamable-http 模式要求 X-FabBot-Key 头 (跨机消费建议 true)
   key: ''
 ratelimit:
   chat_per_minute: 30
@@ -86,3 +86,19 @@ auth_lock:
   max_failures: 5                # 窗口内最大失败次数 (C2 登录防爆破)
   window_minutes: 10
   lock_minutes: 15
+  admin_per_minute: 3            # B1: admin 豁免锁定但加全局限速 (防换 IP 爆破唯一入口)
+intent:
+  model_margin: 2                # E2: 关键词得分与阈值差 >= 此值时短路, 不调模型分类
+  min_confidence: 0.6            # 模型分类最低置信度 (低于则回退关键词)
+agent:
+  max_steps: 3                   # C4: ReAct 循环最大决策轮数
+skillhub:
+  secrets: {}                    # D4: 技能密钥 (Fernet 加密值, fernet:<密文>); 不落日志
+  fernet_key: ''                 # Fernet 主密钥 (base64); 留空则明文密钥仅内网自用
+cors:
+  allow_origins:                 # B3: 跨域白名单 (桌面同源无需 CORS); ['*'] 放开但不带凭证
+  - http://127.0.0.1:8100
+  - http://localhost:8100
+logging:
+  level: INFO                    # C6: DEBUG/INFO/WARNING/ERROR
+  file: ''                       # 日志文件 (相对项目根, 空=仅控制台); 例 data/fabbot.log

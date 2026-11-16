@@ -75,13 +75,14 @@ def main() -> None:
     for item in items:
         if item["type"] == "kb":
             kb_rows.append(_kb_eval(item, args.topk))
-        else:
+        elif item["type"] == "sql":
             sql_rows.append(_sql_eval(item))
+        # 其余类型 (如 chitchat) 仅参与意图评测, 不计入 kb/sql 命中率门禁
 
     kb_hit = sum(1 for r in kb_rows if r["hit"])
     sql_pass = sum(1 for r in sql_rows if r["pass"])
-    # 意图路由指标: 评测项 type 即期望意图
-    intent_rows = [{"id": it["id"], "expected": it["type"],
+    # 意图路由指标: 期望意图取 expect_intent (chitchat→kb), 缺省回退 type
+    intent_rows = [{"id": it["id"], "expected": it.get("expect_intent") or it["type"],
                     "got": classify(it["question"])["intent"]} for it in items]
     intent_ok = sum(1 for r in intent_rows if r["expected"] == r["got"])
     report = {

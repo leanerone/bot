@@ -2,21 +2,28 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import contextmanager
 from datetime import date, timedelta
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Request
 
-from app.adapters.mock_mes import DEMO_DB
+from app.adapters.mock_mes import DEMO_DB, seed_demo_db
 from app.api.deps import require_user
 
 router = APIRouter(prefix="/api/data/charts")
 
 
-def _conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DEMO_DB))
+@contextmanager
+def _conn():
+    """只读连接 + 上下文管理: 查询异常也保证关闭, 不泄漏 (与 text2sql 只读原则一致)。"""
+    seed_demo_db(DEMO_DB)  # 幂等: 演示库缺失/损坏时自愈
+    conn = sqlite3.connect(f"file:{DEMO_DB}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def _days_ago(n: int) -> str:
@@ -29,13 +36,12 @@ def yield_trend(request: Request, days: int = 30):
     require_user(request)
     days = min(max(days, 3), 90)
     since = _days_ago(days)
-    conn = _conn()
-    rows = conn.execute(
-        """SELECT dt, product, AVG(die_yield) AS avg_yield FROM yield_daily
-           WHERE dt >= ? GROUP BY dt, product ORDER BY dt""",
-        (since,),
-    ).fetchall()
-    conn.close()
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT dt, product, AVG(die_yield) AS avg_yield FROM yield_daily
+               WHERE dt >= ? GROUP BY dt, product ORDER BY dt""",
+            (since,),
+        ).fetchall()
 
     by_product: Dict[str, List[Dict[str, Any]]] = {}
     for r in rows:
@@ -50,13 +56,12 @@ def alarm_by_day(request: Request, days: int = 14):
     require_user(request)
     days = min(max(days, 3), 60)
     since = _days_ago(days)
-    conn = _conn()
-    rows = conn.execute(
-        """SELECT substr(dt, 1, 10) AS day, level, COUNT(*) AS cnt FROM alarms
-           WHERE dt >= ? AND handled = 0 GROUP BY day, level ORDER BY day""",
-        (since,),
-    ).fetchall()
-    conn.close()
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT substr(dt, 1, 10) AS day, level, COUNT(*) AS cnt FROM alarms
+               WHERE dt >= ? AND handled = 0 GROUP BY day, level ORDER BY day""",
+            (since,),
+        ).fetchall()
 
     by_level: Dict[str, Dict[str, int]] = {}
     for r in rows:

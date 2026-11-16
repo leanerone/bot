@@ -88,7 +88,8 @@ class AlarmWatcher(threading.Thread):
             try:
                 self.check_once()
             except Exception as exc:  # 守护线程不允许挂掉
-                print(f"[watcher] 轮询异常: {exc}")
+                from app.log import get_logger
+                get_logger("watcher").warning("轮询异常: %s", exc)
             self._stop.wait(self._interval)
 
     def stop(self) -> None:
@@ -114,5 +115,7 @@ def start_if_enabled(adapter=None) -> Optional[AlarmWatcher]:
         adapter = MockMESAdapter()
     w = AlarmWatcher(adapter, _default_sender())
     w.start()
-    print(f"[watcher] 告警轮询已启动 (间隔 {w._interval // 60} 分钟, 级别 {sorted(w.levels)})")
+    from app.log import get_logger
+    get_logger("watcher").info("告警轮询已启动 (间隔 %s 分钟, 级别 %s)",
+                               w._interval // 60, sorted(w.levels))
     return w

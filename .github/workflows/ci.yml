@@ -1,0 +1,67 @@
+# FabBot CI: 后端门禁 (lint/测试/评测/MCP 冒烟) + 桌面前端 (类型检查/构建)
+# 与 scripts/check_all.sh 保持同一套质量门禁
+name: CI
+
+on:
+  push:
+    branches: [main, fabai-hub]
+  pull_request:
+    branches: [main, fabai-hub]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt ruff
+
+      - name: Ruff lint
+        run: ruff check app eval tests tools scripts mcp_server.py backend_runner.py
+
+      - name: Pytest
+        run: python -m pytest tests -q
+
+      - name: Seed demo DB
+        run: python data/demo/seed_demo_db.py
+
+      - name: Offline eval
+        run: python eval/run_eval.py
+        env:
+          PYTHONIOENCODING: utf-8
+
+      - name: MCP smoke (stdio, 7 tools)
+        run: python scripts/mcp_smoke.py
+        env:
+          PYTHONIOENCODING: utf-8
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop/ui
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build

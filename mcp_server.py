@@ -10,12 +10,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import secrets
 
 from mcp.server.fastmcp import FastMCP
 
 from app.config import cfg
 
 mcp = FastMCP("fabbot")
+
+
+def _key_ok(provided: str, required: bool, secret: str) -> bool:
+    """C5 密钥校验: 常量时间比较防时序侧信道; required=False 放行 (stdio 同机无需)。"""
+    if not required:
+        return True
+    return secrets.compare_digest(provided or "", secret or "")
 
 
 @mcp.tool()
@@ -196,7 +204,7 @@ def _run_streamable_http(port: int) -> None:
 
     class KeyGuard(BaseHTTPMiddleware):
         async def dispatch(self, request, call_next):
-            if required and request.headers.get("x-fabbot-key", "") != secret:
+            if not _key_ok(request.headers.get("x-fabbot-key", ""), required, secret):
                 return _JSONResp({"error": "unauthorized: missing/invalid X-FabBot-Key"},
                                  status_code=401)
             return await call_next(request)

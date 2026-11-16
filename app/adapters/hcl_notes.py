@@ -276,6 +276,16 @@ class DominoNotesClient:
                           db_path=self.db_path, body_html=html)
 
 
+def domino_client_from_config() -> DominoNotesClient:
+    """从 config 构造 Domino 客户端 (API 层与守护线程共用, 避免守护线程反向 import API)。"""
+    return DominoNotesClient(
+        base_url=cfg("notes.domino.base_url", ""),
+        db_path=cfg("notes.domino.db_path", ""),
+        username=cfg("notes.domino.username", ""),
+        password=cfg("notes.domino.password", ""),
+    )
+
+
 def ingest_notes_domino(client: DominoNotesClient, store: Optional[LocalVectorStore] = None,
                         embedder=None, view: str = "($All)",
                         incremental: bool = True) -> Dict[str, Any]:

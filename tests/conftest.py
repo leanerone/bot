@@ -8,9 +8,16 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _clear_rate_limits():
-    """限流器为进程内全局状态, 每个用例前后清空, 避免相互泄漏。"""
+    """限流/防爆破为进程内全局状态, 每个用例前后清空, 避免相互泄漏。"""
+    from app.api import auth_lock
     from app.api.limits import _hits
 
-    _hits.clear()
+    def _clear():
+        _hits.clear()
+        auth_lock._admin_hits.clear()
+        auth_lock._failures.clear()
+        auth_lock._locked_until.clear()
+
+    _clear()
     yield
-    _hits.clear()
+    _clear()

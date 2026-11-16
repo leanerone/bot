@@ -171,16 +171,18 @@ _DECISION_SYSTEM = """你是工厂助手的任务规划器。可用工具:
 
 
 def run_agent(question: str, history=None, user: str = "system",
-              max_steps: int = MAX_STEPS,
+              max_steps: Optional[int] = None,
               on_step: Optional[Callable[[dict], None]] = None) -> Dict[str, Any]:
     """执行 Agent 循环, 返回 {answer, steps, sources}。"""
     steps: List[Dict[str, Any]] = []
     sources: List[dict] = []
     obs_texts: List[str] = []
+    # C4: 步数上限可配置 (agent.max_steps), 默认 MAX_STEPS
+    limit = int(max_steps if max_steps is not None else cfg("agent.max_steps", MAX_STEPS))
 
     if cfg("llm.mock", True):
         plan = _mock_plan(question)
-        for p in plan[:max_steps]:
+        for p in plan[:limit]:
             r = call_tool(p["tool"], p["args"], user=user)
             step = {"tool": p["tool"], "ok": r.get("ok", False),
                     "summary": (f"调用 {p['tool']}") + ("" if r.get("ok") else f" 失败: {r.get('error')}"),
@@ -199,7 +201,8 @@ def run_agent(question: str, history=None, user: str = "system",
         f"- {n}: {s['desc']} (args: {json.dumps(s['args'], ensure_ascii=False)})"
         for n, s in TOOLS.items()
     )
-    for _ in range(max_steps):
+    seen: set = set()  # C4: 同工具+同参数重复调用去重, 防模型 3 轮空转
+    for _ in range(limit):
         obs = "\n".join(obs_texts[-2:]) or "(尚无观察)"
         prompt = _DECISION_SYSTEM.format(tools=tool_list)
         try:
@@ -214,6 +217,10 @@ def run_agent(question: str, history=None, user: str = "system",
             decision = {"tool": "", "args": {}, "enough": True}
         if decision.get("enough") or not decision.get("tool"):
             break
+        sig = (decision["tool"], json.dumps(decision.get("args", {}), sort_keys=True, ensure_ascii=False))
+        if sig in seen:
+            break
+        seen.add(sig)
         r = call_tool(decision["tool"], decision.get("args", {}), user=user)
         step = {"tool": decision["tool"], "ok": r.get("ok", False),
                 "summary": f"调用 {decision['tool']}" + ("" if r.get("ok") else f" 失败: {r.get('error')}")}

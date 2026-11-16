@@ -9,7 +9,9 @@ services:
     ports: ["8100:8100"]
     volumes:
       - fabbot-data:/srv/bot/data       # 会话/审计/向量库/演示库 持久化
-      - ../config.yaml:/srv/bot/config.yaml:ro
+      # 可写挂载 (勿加 :ro): 管理后台「配置」页 (app/api/admin_config.py)
+      # 运行时会写回 config.yaml 并生成 .bak, 只读会导致保存失败
+      - ../config.yaml:/srv/bot/config.yaml
     environment:
       PYTHONIOENCODING: utf-8
     restart: unless-stopped

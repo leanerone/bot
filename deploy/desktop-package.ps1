@@ -1,6 +1,6 @@
 # FabBot 桌面应用一键打包 (前端 + sidecar + C# 壳 + 组装部署目录)
-# 用法: powershell -ExecutionPolicy Bypass -File deploy\desktop-package.ps1 [-Version 4.3.0]
-param([string]$Version = "4.3.0")
+# 用法: powershell -ExecutionPolicy Bypass -File deploy\desktop-package.ps1 [-Version 4.4.1]
+param([string]$Version = "4.4.1")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root

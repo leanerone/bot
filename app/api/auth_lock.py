@@ -15,6 +15,7 @@ from app.store import db
 _lock = threading.Lock()
 _failures: Dict[Tuple[str, str], list] = {}  # (username, ip) -> [fail_ts, ...]
 _locked_until: Dict[Tuple[str, str], float] = {}
+_admin_hits: Dict[str, list] = {}  # username -> [attempt_ts, ...] (管理员全局限速)
 
 
 def _key(username: str, ip: str) -> Tuple[str, str]:
@@ -52,6 +53,28 @@ def check_locked(username: str, ip: str) -> int:
             _failures.pop(key, None)
             return int(lock_s)
     return 0
+
+
+def check_admin_rate(username: str) -> bool:
+    """B1: 管理员豁免锁定, 但加更严的全局限速 (按用户名而非 IP, 换 IP 无效)。
+
+    防攻击者对唯一 admin 入口持续爆破。True=放行, False=超限。
+    """
+    if not _is_admin(username):
+        return True
+    limit = int(cfg("auth_lock.admin_per_minute", 3))
+    if limit <= 0:
+        return True
+    now = time.time()
+    key = username.lower()
+    with _lock:
+        hits = [t for t in _admin_hits.get(key, []) if now - t < 60]
+        if len(hits) >= limit:
+            _admin_hits[key] = hits
+            return False
+        hits.append(now)
+        _admin_hits[key] = hits
+        return True
 
 
 def record_failure(username: str, ip: str) -> None:

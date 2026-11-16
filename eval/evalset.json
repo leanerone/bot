@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "description": "Fab Bot 离线评测集: kb=知识检索命中, sql=Text2SQL 可执行性。共 59 条; 上线前请用真实问题替换扩充",
+  "description": "Fab Bot 离线评测集: kb=知识检索命中(42), sql=Text2SQL 可执行性(17), chitchat=意图负向(6, 期望 kb)。共 65 条; 上线前请用真实问题替换扩充",
   "items": [
     {
       "id": "kb-001",
@@ -541,6 +541,42 @@
       "expect_columns": [
         "cnt"
       ]
+    },
+    {
+      "id": "chat-001",
+      "type": "chitchat",
+      "expect_intent": "kb",
+      "question": "你好"
+    },
+    {
+      "id": "chat-002",
+      "type": "chitchat",
+      "expect_intent": "kb",
+      "question": "谢谢你的帮助"
+    },
+    {
+      "id": "chat-003",
+      "type": "chitchat",
+      "expect_intent": "kb",
+      "question": "你能做什么"
+    },
+    {
+      "id": "chat-004",
+      "type": "chitchat",
+      "expect_intent": "kb",
+      "question": "今天星期几"
+    },
+    {
+      "id": "chat-005",
+      "type": "chitchat",
+      "expect_intent": "kb",
+      "question": "再见"
+    },
+    {
+      "id": "chat-006",
+      "type": "chitchat",
+      "expect_intent": "kb",
+      "question": "你叫什么名字"
     }
   ]
 }

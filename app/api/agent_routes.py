@@ -30,8 +30,8 @@ class AgentIn(BaseModel):
     history: Optional[List[dict]] = None
 
 
-def _persist_agent(session_id: Optional[str], user: dict, question: str,
-                   result: dict) -> Optional[str]:
+def _open_agent_session(session_id: Optional[str], user: dict, question: str) -> dict:
+    """取/建会话并落库用户提问 (与 /api/chat 的 _resolve_session 对齐)。"""
     from app.store import db
 
     if session_id:
@@ -40,10 +40,18 @@ def _persist_agent(session_id: Optional[str], user: dict, question: str,
             raise HTTPException(404, "会话不存在或无权访问")
     else:
         session = db.create_chat_session(user["id"], question[:20] or "Agent 会话")
-    db.add_message(session["id"], "user", "", question)  # 新旧会话统一落库用户提问
-    db.add_message(session["id"], "assistant", "kb", result.get("answer", ""),
-                   sources=result.get("sources"))
-    return session["id"]
+    db.add_message(session["id"], "user", "", question)
+    return session
+
+
+def _persist_agent(session_id: Optional[str], user: dict, question: str,
+                   result: dict) -> tuple:
+    from app.store import db
+
+    session = _open_agent_session(session_id, user, question)
+    mid = db.add_message(session["id"], "assistant", "kb", result.get("answer", ""),
+                         sources=result.get("sources"))
+    return session["id"], mid
 
 
 @router.post("/chat")
@@ -55,11 +63,11 @@ def agent_chat(body: AgentIn, request: Request):
         raise HTTPException(400, "问题不能为空")
     t0 = time.time()
     result = agent_loop.run_agent(q, history=body.history, user=user["username"])
-    sid = _persist_agent(body.session_id, user, q, result)
+    sid, mid = _persist_agent(body.session_id, user, q, result)
     audit_mod.record(user["username"], "/api/agent/chat",
                      f"agent({len(result.get('steps', []))}步)", q,
                      int((time.time() - t0) * 1000))
-    return {"session_id": sid, "type": "agent", **result}
+    return {"session_id": sid, "assistant_message_id": mid, "type": "agent", **result}
 
 
 @router.post("/chat/stream")
@@ -74,11 +82,17 @@ def agent_chat_stream(body: AgentIn, request: Request):
     q = _guard_scan(user, body.question.strip(), "/api/agent/chat/stream")
     if not q:
         raise HTTPException(400, "问题不能为空")
+    # A2: 提前建会话并落库提问 —— meta 即可带 session_id (前端认领会话, 不再产生孤儿),
+    # 与 /api/chat/stream 契约一致; 无效会话在此即返回 404。
+    session = _open_agent_session(body.session_id, user, q)
+    sid = session["id"]
 
     def sse(event: str, payload: dict) -> str:
         return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
     def gen():
+        from app.store import db
+
         t0 = time.time()
         events: "queue.Queue[dict]" = queue.Queue()
         result_holder: dict = {}
@@ -99,7 +113,7 @@ def agent_chat_stream(body: AgentIn, request: Request):
 
         threading.Thread(target=work, daemon=True).start()
         try:
-            yield sse("meta", {"type": "agent"})
+            yield sse("meta", {"type": "agent", "session_id": sid})
             while True:
                 try:
                     item = events.get(timeout=15)
@@ -113,11 +127,13 @@ def agent_chat_stream(body: AgentIn, request: Request):
             if error_holder:
                 raise error_holder[0]
             result = result_holder["r"]
-            sid = _persist_agent(body.session_id, user, q, result)
+            mid = db.add_message(sid, "assistant", "kb", result.get("answer", ""),
+                                 sources=result.get("sources"))
             for chunk in _chunked(result.get("answer", "")):
                 yield sse("delta", {"text": chunk})
             yield sse("done", {"sources": result.get("sources", []),
-                               "steps": result.get("steps", []), "session_id": sid})
+                               "steps": result.get("steps", []),
+                               "session_id": sid, "message_id": mid})  # A2: 补 message_id 供反馈
             audit_mod.record(user["username"], "/api/agent/chat/stream",
                              f"agent({n_steps}步)", q,
                              int((time.time() - t0) * 1000))

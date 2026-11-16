@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from app.api.deps import COOKIE_NAME, _token_from, public_user, require_user
+from app.api.deps import COOKIE_NAME, _token_from, client_ip, public_user, require_user
 from app.config import cfg
 from app.store import db
 
@@ -22,13 +22,17 @@ def login(body: LoginIn, request: Request):
     from app.api import auth_lock
     from app.api.limits import check_login
 
-    ip = request.client.host if request.client else "?"
-    check_login(f"{body.username.strip()}@{ip}")
-    locked = auth_lock.check_locked(body.username.strip(), ip)
+    ip = client_ip(request)  # B2: 可信代理才采信 XFF, 否则直连 IP
+    uname = body.username.strip()
+    check_login(f"{uname}@{ip}")
+    if not auth_lock.check_admin_rate(uname):  # B1: admin 全局限速 (豁免锁定但不豁免限速)
+        db.log_audit(uname, "/api/auth/login", "", "", 0, status="admin_rate")
+        raise HTTPException(429, "管理员登录尝试过于频繁, 请 1 分钟后再试")
+    locked = auth_lock.check_locked(uname, ip)
     if locked:
-        db.log_audit(body.username.strip(), "/api/auth/login", "", "", 0, status="locked")
+        db.log_audit(uname, "/api/auth/login", "", "", 0, status="locked")
         raise HTTPException(423, f"失败次数过多, 账号已临时锁定, 请 {max(1, locked // 60)} 分钟后再试")
-    user = db.authenticate(body.username.strip(), body.password)
+    user = db.authenticate(uname, body.password)
     if not user:
         auth_lock.record_failure(body.username.strip(), ip)
         db.log_audit(body.username.strip(), "/api/auth/login", "", "", 0, status="fail")

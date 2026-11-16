@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BigTitle, Modal, Switch } from "../components/ui";
-import { getJSON, patchJSON, postJSON, delJSON } from "../api";
+import { getJSON, patchJSON, postJSON, putJSON, delJSON } from "../api";
 
 /* B1: 桌面管理页 —— 统计 / 用户 / 审计 / 会话 / 配置+推送测试 (仅 admin 角色可见入口) */
 
@@ -261,8 +261,12 @@ function ConfigTab() {
   }, []);
   const save = async () => {
     try {
-      const r = await postJSON<any>("/api/admin/config", { config: draft });
-      setMsg(`✅ 已保存 ${r.updated ?? ""} (重启后生效)`);
+      // A1: 后端为 PUT + 扁平 key→value (draft 本身即扁平点路径键); 被拒键走 400 detail
+      const r = await putJSON<any>("/api/admin/config", draft);
+      const rejected: string[] = r.rejected || [];
+      setMsg(rejected.length
+        ? `⚠️ 已应用 ${r.applied?.length ?? 0} 项, 被拒绝: ${rejected.join(", ")}`
+        : `✅ 已保存 ${r.applied?.length ?? 0} 项 (${r.restart_hint || "重启后生效"})`);
     } catch (e: any) { setMsg("❌ " + e.message); }
   };
   const entries = Object.entries(cfgData);

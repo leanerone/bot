@@ -65,10 +65,12 @@ def test_token_expiry_and_revoke():
     token, expires = db.issue_token(u["id"], ttl_hours=1)
     assert expires > db._now()
     assert db.resolve_token(token)["id"] == u["id"]
-    # 过期: 直接把 expires_at 改到过去
+    # 过期: 直接把 expires_at 改到过去 (白盒绕过 DAO, 需手动失效令牌缓存;
+    # 自然过期由 resolve_token 缓存内 expires 检查处理, 生产吊销均经 DAO 自动失效)
     with db._lock:
         db.get_conn().execute("UPDATE auth_tokens SET expires_at = '2000-01-01T00:00:00' WHERE token = ?", (token,))
         db.get_conn().commit()
+    db._invalidate_token_cache()
     assert db.resolve_token(token) is None
     t2, _ = db.issue_token(u["id"])
     db.revoke_token(t2)

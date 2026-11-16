@@ -115,14 +115,15 @@ export default function Chat({ me, initialSession }: { me: Me; initialSession?: 
   };
   useEffect(() => () => { if (flushTimer.current != null) window.clearTimeout(flushTimer.current); }, []);
 
-  const send = async () => {
-    const q = input.trim();
+  const send = async (retryQ?: string) => {
+    const q = (retryQ ?? input).trim();
     if (!q || generating) return;
-    setInput("");
+    if (!retryQ) setInput("");
     const ts = () => new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
     const userMsg: ChatMsg = { role: "user", text: q, ts: ts() };
     const am: ChatMsg = { role: "assistant", text: "", type: "kb", sources: [], streaming: true };
-    setMessages(prev => [...prev, userMsg, am]);
+    // C7: 重试时移除上一轮失败的提问+回答, 再重发同一问题
+    setMessages(prev => [...(retryQ ? prev.slice(0, -2) : prev), userMsg, am]);
     setSteps([]);
     setFollow(true);
     setGenerating(true);
@@ -174,7 +175,10 @@ export default function Chat({ me, initialSession }: { me: Me; initialSession?: 
             if (line.startsWith("event:")) ev = line.slice(6).trim();
             else if (line.startsWith("data:")) data += line.slice(5).trim();
           });
-          if (data) { try { handle(ev, JSON.parse(data)); } catch { /* ignore */ } }
+          if (data) {
+            try { handle(ev, JSON.parse(data)); }
+            catch (err) { console.warn("SSE 事件解析失败:", data, err); }   // C7: 不静默吞错, 也不中断流
+          }
         }
       }
       flushPend();
@@ -187,7 +191,8 @@ export default function Chat({ me, initialSession }: { me: Me; initialSession?: 
         if (!m) return arr;
         arr[arr.length - 1] = { ...m, streaming: false,
           text: e.name === "AbortError" ? m.text + "\n\n（已停止）" : "请求失败: " + e.message,
-          error: e.name !== "AbortError" };
+          error: e.name !== "AbortError",
+          retry: e.name !== "AbortError" ? q : undefined };   // C7: 失败消息可重试
         return arr; });
     } finally {
       setGenerating(false); abortRef.current = null;
@@ -296,7 +301,7 @@ export default function Chat({ me, initialSession }: { me: Me; initialSession?: 
             </div>
           )}
           {messages.map((m, i) => <Message key={i} m={m} steps={steps} thinking={thinking}
-            onRate={rate} onSrc={(t, x, l) => setSrcModal({ title: t, text: x, link: l })} />)}
+            onRate={rate} onRetry={q => send(q)} onSrc={(t, x, l) => setSrcModal({ title: t, text: x, link: l })} />)}
           {!follow && generating && (
             <button className="fixed-float" onClick={() => setFollow(true)}>↓ 回到底部</button>
           )}
@@ -316,7 +321,7 @@ export default function Chat({ me, initialSession }: { me: Me; initialSession?: 
               </label>
               {generating && <button className="ios-btn-ghost mr-1 text-[12px] py-1" onClick={stop}>■ 停止</button>}
               <button className="ios-btn-primary px-5 py-1.5 text-[13px]" disabled={generating || !input.trim()}
-                onClick={send}>发送</button>
+                onClick={() => send()}>发送</button>
             </div>
           </div>
         </div>
@@ -335,9 +340,9 @@ export default function Chat({ me, initialSession }: { me: Me; initialSession?: 
 
 import { esc, mdToHtml } from "../lib/md";
 
-function Message({ m, steps, thinking, onRate, onSrc }: {
+function Message({ m, steps, thinking, onRate, onRetry, onSrc }: {
   m: ChatMsg; steps: { tool: string; ok: boolean; summary: string }[]; thinking: boolean;
-  onRate: (id: any, v: string) => void; onSrc: (t: string, x: string, l?: string) => void;
+  onRate: (id: any, v: string) => void; onRetry: (q: string) => void; onSrc: (t: string, x: string, l?: string) => void;
 }) {
   if (m.role === "user")
     return <div className="flex justify-end mb-3 msg-enter"><div className="selectable bg-[#0A84FF] text-white max-w-[72%] px-4 py-2.5
@@ -398,6 +403,10 @@ function Message({ m, steps, thinking, onRate, onSrc }: {
               </>}
             </div>
           </>
+        )}
+        {/* C7: 失败消息提供重试 (重发同一问题) */}
+        {m.error && m.retry && (
+          <button className="ios-btn-ghost mt-2 px-3 py-1 text-[12px]" onClick={() => onRetry(m.retry!)}>↻ 重试</button>
         )}
       </div>
     </div>

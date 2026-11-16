@@ -33,13 +33,16 @@ export interface ChatMsg {
   ts?: string;
   streaming?: boolean;
   error?: boolean;
+  retry?: string;   // C7: 失败消息携带原问题, 供"重试"重发
 }
 export interface Health { status: string; kb_chunks: number; version: string;
-  llm: { mock: boolean; model: string }; notes_mode: string }
+  llm: { mock: boolean; model: string; degraded?: boolean }; notes_mode: string }
 
 export const getJSON = <T = any>(p: string) => api<T>(p);
 export const postJSON = <T = any>(p: string, body?: any) =>
   api<T>(p, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
+export const putJSON = <T = any>(p: string, body?: any) =>
+  api<T>(p, { method: "PUT", body: body === undefined ? undefined : JSON.stringify(body) });
 export const patchJSON = <T = any>(p: string, body?: any) =>
   api<T>(p, { method: "PATCH", body: JSON.stringify(body) });
 export const delJSON = <T = any>(p: string) => api<T>(p, { method: "DELETE" });

@@ -1,22 +1,22 @@
 {
- "time": "2026-11-15T01:49:20",
+ "time": "2026-11-16T16:28:10",
  "mode": "offline",
  "topk": 6,
  "kb": {
   "total": 42,
   "hit": 42,
   "hit_rate": 1.0,
-  "avg_ms": 0
+  "avg_ms": 1
  },
  "sql": {
   "total": 17,
   "pass": 17,
   "pass_rate": 1.0,
-  "avg_ms": 0
+  "avg_ms": 1
  },
  "intent": {
-  "total": 59,
-  "correct": 59,
+  "total": 65,
+  "correct": 65,
   "accuracy": 1.0,
   "misses": []
  },
@@ -33,7 +33,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 2
+   "ms": 36
   },
   {
    "id": "kb-002",
@@ -61,7 +61,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-004",
@@ -89,7 +89,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-006",
@@ -117,7 +117,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-008",
@@ -170,7 +170,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-012",
@@ -252,7 +252,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "工艺常见问题FAQ.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-018",
@@ -305,7 +305,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "ETCH刻蚀机台异常处置SOP.md",
-   "ms": 1
+   "ms": 0
   },
   {
    "id": "kb-022",
@@ -545,7 +545,7 @@
    "miss_terms": [],
    "n_sources": 6,
    "top1_source": "CMP研磨机台异常处置SOP.md",
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "kb-040",
@@ -592,7 +592,7 @@
    "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 0
+   "ms": 4
   },
   {
    "id": "sql-002",
@@ -601,7 +601,7 @@
    "sql": "SELECT eqp_group, COUNT(*) AS cnt FROM eqp WHERE status = 'DOWN' GROUP BY eqp_group ORDER BY cnt DESC LIMIT 20",
    "rows": 1,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-003",
@@ -610,7 +610,7 @@
    "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
    "rows": 4,
    "missing_columns": [],
-   "ms": 0
+   "ms": 2
   },
   {
    "id": "sql-004",
@@ -619,7 +619,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-005",
@@ -637,7 +637,7 @@
    "sql": "SELECT lot_id, product, layer, qty FROM wip ORDER BY lot_id LIMIT 20",
    "rows": 20,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-007",
@@ -646,7 +646,7 @@
    "sql": "SELECT dt, product, die_yield FROM yield_daily ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-008",
@@ -655,7 +655,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-009",
@@ -682,7 +682,7 @@
    "sql": "SELECT dt, product, die_yield FROM yield_daily ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-012",
@@ -691,7 +691,7 @@
    "sql": "SELECT dt, eqp_id, level, code, message FROM alarms WHERE handled = 0 ORDER BY dt DESC LIMIT 10",
    "rows": 10,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-013",
@@ -709,7 +709,7 @@
    "sql": "SELECT product, AVG(die_yield) AS avg_yield FROM yield_daily WHERE dt >= DATE('now', 'localtime', '-7 day') GROUP BY product ORDER BY avg_yield DESC LIMIT 20",
    "rows": 4,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-015",
@@ -718,7 +718,7 @@
    "sql": "SELECT eqp_id, eqp_group, vendor, status FROM eqp ORDER BY eqp_id LIMIT 20",
    "rows": 13,
    "missing_columns": [],
-   "ms": 0
+   "ms": 1
   },
   {
    "id": "sql-016",

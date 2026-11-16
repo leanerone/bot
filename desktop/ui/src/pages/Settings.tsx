@@ -4,9 +4,10 @@ import { BigTitle, Card, SectionTitle, Switch, Segmented } from "../components/u
 
 type GlassMode = "off" | "eco" | "on";
 
-export default function Settings({ me, health, dark, setDark, glass, setGlass, refreshHealth }: {
+export default function Settings({ me, health, dark, setDark, glass, setGlass, refreshHealth, onLogoutAll }: {
   me: Me; health: Health | null; dark: boolean; setDark: (v: boolean) => void;
   glass: GlassMode; setGlass: (v: GlassMode) => void; refreshHealth: () => void;
+  onLogoutAll: () => Promise<void>;
 }) {
   const [oldPw, setOldPw] = useState(""); const [newPw, setNewPw] = useState("");
   const [msg, setMsg] = useState("");
@@ -22,10 +23,24 @@ export default function Settings({ me, health, dark, setDark, glass, setGlass, r
     try { await patchJSON("/api/auth/me", { display_name: name }); setMsg("✅ 已保存"); }
     catch (e: any) { setMsg("⚠️ " + e.message); }
   };
+  // C7: 全端登出 —— 吊销全部令牌, 由 App 清空登录态回到登录页
+  const logoutAll = async () => {
+    if (!confirm("确认全端登出？该账号在所有设备上的登录都将失效。")) return;
+    setMsg("");
+    try { await onLogoutAll(); }
+    catch (e: any) { setMsg("⚠️ " + e.message); }
+  };
 
   return (
     <div className="app-view"><div className="max-w-[720px]">
       <BigTitle sub="账号、外观与服务状态">设置</BigTitle>
+
+      {/* B8: 云端 LLM 不可达自动降级提示 (区别于主动开启的 Mock 演示模式) */}
+      {health?.llm.degraded && (
+        <div className="ios-card p-3 mb-4 text-[12.5px] text-[#FF9500] bg-[#FF9500]/10 border-[#FF9500]/30">
+          ⚠️ 云端模型不可达，已自动降级为 Mock 演示模式
+        </div>
+      )}
 
       <SectionTitle>外观</SectionTitle>
       <Card className="mb-4 flex items-center justify-between">
@@ -68,13 +83,17 @@ export default function Settings({ me, health, dark, setDark, glass, setGlass, r
           </div>
           {msg && <div className="text-[12.5px] px-1">{msg}</div>}
         </div>
+        <div className="border-t border-black/5 dark:border-white/5 pt-3 flex items-center justify-between gap-3">
+          <div className="text-[12px] text-ios-label2">丢失设备或怀疑令牌泄露时，吊销该账号所有设备的登录</div>
+          <button className="ios-btn-ghost px-4 py-1.5 text-[13px] text-[#FF453A] shrink-0" onClick={logoutAll}>全端登出</button>
+        </div>
       </Card>
 
       <SectionTitle>服务状态</SectionTitle>
       <Card className="mb-4 space-y-2 text-[13.5px]">
         <div className="flex justify-between"><span className="text-ios-label2">后端版本</span><span>{health?.version ?? "–"}</span></div>
         <div className="flex justify-between"><span className="text-ios-label2">模型服务</span>
-          <span>{health ? (health.llm.mock ? "Mock 演示模式" : health.llm.model) : "离线"}</span></div>
+          <span>{health ? (health.llm.mock ? `Mock 演示模式${health.llm.degraded ? "（自动降级）" : ""}` : health.llm.model) : "离线"}</span></div>
         <div className="flex justify-between"><span className="text-ios-label2">知识库</span>
           <span>{health ? `${health.kb_chunks} 片段` : "–"}</span></div>
         <div className="flex justify-between"><span className="text-ios-label2">Notes 接入</span>

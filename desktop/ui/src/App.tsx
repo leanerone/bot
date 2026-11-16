@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Me, getJSON, Health, SessionMeta } from "./api";
+import { Me, getJSON, postJSON, Health, SessionMeta } from "./api";
 import Login from "./pages/Login";
 import NotificationCenter from "./components/NotificationCenter";
 import Home from "./pages/Home";
@@ -128,6 +128,13 @@ export default function App() {
     setSessions([]);
   };
 
+  // C7: 全端登出 —— 吊销当前用户全部令牌后回到登录页
+  const logoutAll = async () => {
+    await postJSON("/api/auth/logout_all");
+    setMe(null);
+    setSessions([]);
+  };
+
   const go = (v: string) => { setOpenSession(null); setView(v as View); };
   const goSession = (id: string) => { setOpenSession(id); setView("chat"); };
 
@@ -241,7 +248,7 @@ export default function App() {
             {view === "skills" && <Skills me={me} />}
             {view === "admin" && <Admin me={me} />}
             {view === "settings" && <Settings me={me} health={health} dark={dark} setDark={setDark}
-              glass={glass} setGlass={setGlass} refreshHealth={refreshHealth} />}
+              glass={glass} setGlass={setGlass} refreshHealth={refreshHealth} onLogoutAll={logoutAll} />}
           </div>
         </main>
       </div>

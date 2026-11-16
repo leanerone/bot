@@ -187,7 +187,9 @@ class DegradedLLM:
 
     def chat(self, messages: List[dict], temperature: Optional[float] = None) -> str:
         try:
-            return self.real.chat(messages, temperature)
+            out = self.real.chat(messages, temperature)
+            self.degraded = False  # B8: 云端恢复即复位, 健康检查不再误报
+            return out
         except LLMError:
             self.degraded = True
             return f"⚠️ {DEGRADE_MARK}\n\n" + self.fallback.chat(messages, temperature)
@@ -200,6 +202,7 @@ class DegradedLLM:
                 yield chunk
             if first:  # 空流视为异常
                 raise LLMError("空响应")
+            self.degraded = False
             return
         except LLMError:
             self.degraded = True
@@ -207,17 +210,35 @@ class DegradedLLM:
             yield from self.fallback.chat_stream(messages, temperature)
 
 
+# B8: 缓存真实/降级 LLM 单例 —— 否则每次 get_llm() 新建实例, degraded 状态无法跨请求保留
+_real_llm = None
+_real_key: tuple = ()
+
+
+def degraded_status() -> bool:
+    """供 /api/health 与前端标黄读取: 当前是否处于云端故障降级态。"""
+    return bool(getattr(_real_llm, "degraded", False))
+
+
 def get_llm():
     if cfg("llm.mock", True):
         return MockLLM()
-    real = OpenAICompatLLM(
-        base_url=cfg("llm.base_url", "http://127.0.0.1:8000/v1"),
-        api_key=cfg("llm.api_key", "EMPTY"),
-        model=cfg("llm.model", "Qwen2.5-32B-Instruct-AWQ"),
-        timeout=float(cfg("llm.timeout", 120)),
-        provider=cfg("llm.provider", "openai"),
-        api_version=cfg("llm.api_version", "2024-10-21"),
+    global _real_llm, _real_key
+    key = (
+        cfg("llm.provider", "openai"),
+        cfg("llm.base_url", "http://127.0.0.1:8000/v1"),
+        cfg("llm.api_key", "EMPTY"),
+        cfg("llm.model", "Qwen2.5-32B-Instruct-AWQ"),
+        float(cfg("llm.timeout", 120)),
+        cfg("llm.api_version", "2024-10-21"),
+        bool(cfg("llm.fallback_mock", True)),
     )
-    if cfg("llm.fallback_mock", True):
-        return DegradedLLM(real, MockLLM())
-    return real
+    if _real_llm is not None and _real_key == key:
+        return _real_llm
+    real = OpenAICompatLLM(
+        base_url=key[1], api_key=key[2], model=key[3],
+        timeout=key[4], provider=key[0], api_version=key[5],
+    )
+    _real_llm = DegradedLLM(real, MockLLM()) if key[6] else real
+    _real_key = key
+    return _real_llm

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 
 # (正则, 标签) —— 命中任一即标注, 供审计与测试
 _PATTERNS = [
@@ -40,11 +41,25 @@ BOUNDARY_OPEN = (
 BOUNDARY_CLOSE = "<<<<<<<< 检索资料边界结束 >>>>>>>>"
 
 
+_CJK = r"\u4e00-\u9fff"
+
+
+def _normalize(text: str) -> str:
+    """检测前归一化, 抗常见绕过变体 (仅用于 scan, 不改原文/入库内容):
+    - NFKC: 全角字母/数字/标点 → 半角 (ｉｇｎｏｒｅ → ignore);
+    - 去除 CJK 字符间空白: 拆字绕过 (忽 略 以 上 指 令 → 忽略以上指令)。
+    残留局限: 同形字 (西里尔 а 等) 与编码绕过仍需后续语义层兜底。"""
+    t = unicodedata.normalize("NFKC", text or "")
+    return re.sub(rf"(?<=[{_CJK}])\s+(?=[{_CJK}])", "", t)
+
+
 def scan(text: str) -> dict:
-    """扫描注入特征, 返回 {injection, tags}; 不修改原文。"""
+    """扫描注入特征, 返回 {injection, tags}; 不修改原文。原文与归一化双路匹配。"""
+    raw = text or ""
+    norm = _normalize(raw)
     hits = []
     for pat, tag in _PATTERNS:
-        if re.search(pat, text or "", re.I):
+        if re.search(pat, raw, re.I) or re.search(pat, norm, re.I):
             hits.append(tag)
     return {"injection": bool(hits), "tags": sorted(set(hits))}
 

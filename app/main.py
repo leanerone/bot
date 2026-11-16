@@ -22,11 +22,13 @@ from app.api.agent_routes import router as agent_router
 from app.api.charts import router as charts_router
 from app.api.admin_config import router as admin_config_router
 from app.config import ROOT, abs_path, cfg
+from app.log import get_logger
 from app.rag.ingest import get_store, ingest_dir
 from app.store import db
 from app.watcher.alarm_watcher import start_if_enabled
 from app.watcher.notes_sync import start_if_enabled as start_notes_sync
 
+_log = get_logger("main")
 _watcher = None
 
 
@@ -41,15 +43,13 @@ def _bootstrap() -> None:
     conn.close()
     if max_dt and max_dt < datetime.now().strftime("%Y-%m-%d"):  # 演示数据滑出时间窗 -> 重种
         seed_demo_db(DEMO_DB, force=True)
-        print("[bootstrap] 演示数据已过期, 已按当天重新生成")
+        _log.info("演示数据已过期, 已按当天重新生成")
     store = get_store()
     kb_dir = abs_path(cfg("rag.knowledge_path", "data/knowledge"))
     if len(store) == 0 and kb_dir.exists() and any(kb_dir.iterdir()):
         summary = ingest_dir(str(kb_dir))
-        print(
-            f"[bootstrap] 已导入知识库: {summary['chunks']} 片段 / "
-            f"{len(summary['files'])} 文件 (errors: {len(summary['errors'])})"
-        )
+        _log.info("已导入知识库: %s 片段 / %s 文件 (errors: %s)",
+                  summary["chunks"], len(summary["files"]), len(summary["errors"]))
 
 
 @asynccontextmanager
@@ -66,9 +66,18 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Fab Bot", version="4.4.0", lifespan=lifespan)
+    app = FastAPI(title="Fab Bot", version="4.4.1", lifespan=lifespan)
+    # B3: CORS 配置化白名单 (cookie 认证体系不应默认全放开)。
+    # 桌面端同源无需 CORS; 跨域 web 部署经 cors.allow_origins 显式列出可信源。
+    origins = cfg("cors.allow_origins", ["http://127.0.0.1:8100", "http://localhost:8100"])
+    if isinstance(origins, str):
+        origins = [origins]
+    wildcard = "*" in origins
     app.add_middleware(
-        CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+        CORSMiddleware,
+        allow_origins=["*"] if wildcard else list(origins),
+        allow_credentials=not wildcard,  # 通配源时浏览器禁止携带凭证
+        allow_methods=["*"], allow_headers=["*"],
     )
     app.include_router(auth_routes.router)
     app.include_router(router)

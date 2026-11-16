@@ -1,5 +1,68 @@
 # 更新日志
 
+## v4.4.1 (2026-11-16) —— 两轮缺陷修复与加固 · 交付链补齐
+
+> 两轮修复 (f0a3d0c + v4.4.1): 缺陷修复/性能/安全/交付链/文档, 测试 114 → 138;
+> 第二轮: 管理/技能/Agent 契约修正 + 安全加固 + Docker/CI/安装器交付链补齐。
+> 评测三项保持 100% (知识 42/42 · SQL 17/17 · 意图 65/65 含 chitchat 负向), MCP 冒烟 7/7。
+
+### 修复
+- **Skill 执行器截断崩溃**: 输出超限改为结构化收缩 (list/dict 减半), 不再产生非法 JSON
+- **Agent 新会话漏存用户提问**: 首轮提问与回答一并落库, 换设备回看不再丢上半句
+- **会话 ID 碰撞**: 时间戳+hash 截断改为 uuid 随机 ID (同毫秒不再撞车)
+- **演示库 0 字节自愈**: MockMESAdapter/charts 检测缺失或损坏自动重种 (seed_demo_db 幂等)
+- **Admin 配置页 PUT 契约**: 前端改用 PUT /api/admin/config (原 POST 与后端白名单契约不符)
+- **Agent 流式反馈闭环**: meta 事件携带 session_id, done 事件携带 message_id —— Agent 回答可 👍/👎
+- **Skills 参数键修正**: text2sql 技能参数键为 question (其余 query), 不再传错空参
+- **技能详情路由**: GET /api/skills/{name} (原 /api/{name} 单段通配会遮蔽同级 GET);
+  新增 GET /api/skills/{name}/runs 最近执行审计
+- **交班报告 Word 导出/推送按钮** (任务中心 UI) 与后端 /api/tasks/shift-report/export|push 对齐
+- **charts.py 连接泄漏**: 只读连接 (mode=ro) + 上下文管理, 查询异常也保证关闭
+- **backend_runner 内嵌兜底配置同步 v4.4** (provider/fallback_mock/rerank/teams/mcp/auth_lock 等)
+
+### 性能
+- rerank 实例缓存 (不再每次检索重建 CrossEncoder/HTTP 客户端)
+- 知识导入先去重后嵌入 (store.filter_new), 重复文档不再白跑 embedding
+- Notes 导入批量 embed; 意图分类短路 (intent.model_margin, 关键词得分远离阈值不调模型, 省首字节延迟)
+- Agent SSE 步骤实时推送 (工作线程 + 队列 + 15s ping 保活), 不再等循环结束一次性回放
+- 令牌解析 TTL 缓存 (60s, 鉴权变更立即清空 —— 禁用/改密即时生效保留)
+- Agent 步数上限可配 (agent.max_steps, 默认 3) + 同工具同参数重复调用去重, 防模型空转
+- DB 索引补全: messages(created_at) / audit(ts) / audit(user) / auth_tokens(user_id) (加速统计/审计/吊销)
+
+### 安全
+- **KB 上传加固**: 路径穿越改 relative_to 校验 (防同级前缀目录误放行) + 原始文件 10MB 上限 (413) +
+  问题 4000 字上限 (422); 同名 SOP 上传自动版本替换 (清旧片段与旧文件)
+- **Agent 入口注入扫描**: /api/agent/chat(/stream) 与统一入口同一套 prompt_guard 防线
+- **prompt_guard 归一化**: NFKC 全角→半角 + CJK 拆字空白去除, 抗 "ｉｇｎｏｒｅ"/"忽 略 以 上" 变体 (仅检测用, 不改原文)
+- **admin 登录全局限速** (auth_lock.admin_per_minute=3): 豁免锁定但不豁免限速, 防换 IP 爆破唯一入口
+- **X-Forwarded-For 可信代理** (auth.trusted_proxies): 仅可信直连来源才采信 XFF, 防伪造头绕过锁定/限流
+- **CORS 白名单** (cors.allow_origins): 默认仅本机同源; ['*'] 时浏览器禁带凭证
+- **MCP 密钥常量时间比较** (secrets.compare_digest), 防时序侧信道
+- **技能执行权限收紧**: user+ 才可执行 (viewer 只读置灰); 写操作确认卡 (确认后携带 _confirmed)
+- 向量库原子写 (tmp + os.replace); BM25 双检锁; 限流字典定期清扫
+
+### 交付
+- **依赖**: python-docx / pdfplumber 由可选转必选 (.docx/.pdf 知识解析 + Word 导出)
+- **Dockerfile 完整多阶段**: node20 构建 React 前端 → python3.12-slim 运行时,
+  拷贝 mcp_server.py / skills / eval / tools / scripts / backend_runner.py + 前端 dist, 非 root 运行 + 健康检查
+- **compose 配置挂载可写**: config.yaml 去掉 :ro (管理端配置写回 + .bak 备份需要)
+- **GitHub Actions CI** (.github/workflows/ci.yml): lint/测试/评测/MCP 冒烟 + 前端 tsc/构建, 与 check_all.sh 同门禁
+- **Inno Setup 安装器** (deploy/installer.iss): WebView2 检测引导 + 用户数据目录卸载保留
+- **统一日志框架** (app/log.py): logging.level / logging.file 替代散落 print (PyInstaller 窗口模式不再丢日志)
+- **降级态可观测**: /api/health 暴露 llm.degraded, 云端恢复自动复位; 设置页标黄提示
+- **技能中心 UI 强化**: SKILL.md 正文 Markdown 渲染 + 最近执行列表 + 写确认卡 + viewer 权限置灰
+- **失败消息重试** (C7): 流式失败携带原问题一键重发
+
+### 文档
+- README / DEPLOY / USER_GUIDE / ACCEPTANCE / ARCHITECTURE / HUB_ROADMAP / 晨检导读 全面同步 v4.4.1
+- 新增 docs/MCP_TOOLS.md: 7 工具名称/参数/envelope 参考 (AIWEB 消费方不再需要读源码)
+- 架构红线 D1 修订: 如实描述"默认内网私有化 + Azure 可选出口", 启用云端须经合规决策 (待决策层确认)
+- 修正 v4.4.0 日志中交班报告路由笔误 (shift → shift-report)
+
+### 质量
+- 测试 114 → 138 项 (两轮新增 24 项回归); 评测三项 100% 不回退 (意图 65/65 含 6 条 chitchat); ruff 清零; MCP 冒烟 7/7
+
+
 ## v4.4.0 (2026-11-15) —— 云模型接入 · Agent 循环 · Teams/Notes 适配 · 安全纵深
 
 ### 新增
@@ -20,8 +83,8 @@
 - **Teams 通知渠道 (B3)**: app/notify/teams.py 双格式 —— O365 Connector(MessageCard) +
   Power Automate(Adaptive Card); 告警分级配色卡片+机台分布表; watcher 默认 platform=teams;
   推送测试 UI 渠道下拉 (teams/企微/钉钉/飞书); 新增飞书渠道 feishu.py
-- **交班报告 Word 导出+推送 (B4)**: python-docx 导出 /api/tasks/shift/export;
-  /api/tasks/shift/push 一键推送摘要到 Teams
+- **交班报告 Word 导出+推送 (B4)**: python-docx 导出 /api/tasks/shift-report/export;
+  /api/tasks/shift-report/push 一键推送摘要到 Teams
 - **HCL Notes 深化 (B5)**: 文档级增量同步(UNID 跳过+去重键) / 多库逐库拉取(失败隔离) /
   检索来源带 doclink, 引用弹层"在 Notes 中打开原文"(notes:// 协议); 定时同步守护 notes.sync
 - **Rerank 精排 (E1)**: app/rag/rerank.py 三级 provider —— off(规则降级, 机台号/告警码精确加权) /
