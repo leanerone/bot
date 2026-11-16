@@ -284,3 +284,10 @@
 - 最终回归: pytest 65 passed / 评测三项 100% (59 条) / ruff lint 清零 / 前端构建 ✓ / C# 构建 ✓
 - 版本: v4.3.0 (tag 已打, 已推送)
 - 作业窗口: 00:05 ~ 06:12 (计划 06:30 截止, 提前完成)
+
+## 🔐 身份桥 (2026-11-17 凌晨, Hub Phase 1 BOT 侧缺口补齐)
+
+- deps.py: `_resolve_external_jwt` — AIWEB JWT (HS256 共享密钥) 校验, sub=域账号自动建档 (viewer, 随机不可登录口令仅身份映射), 过期/错签名/禁用即拒
+- db.py: provision_user 域账号自动建档; 与内置账号体系并存 (Cookie 令牌通道不变)
+- tests/test_jwt_bridge.py: 5 项 (自动建档/角色映射/错签名/过期/桥关闭) — 148 测试全绿
+- 分支 bots (00:05 推送, 4525084)
