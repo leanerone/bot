@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from app.adapters.hcl_notes import (ingest_notes_domino, ingest_notes_domino_multi,
                                     ingest_notes_export)
 from app.api import audit as audit_mod
+from app.bots.registry import get_bot as get_bot_def
 from app.api.deps import require_role, require_user
 from app.api.intent import classify_smart
 from app.api.limits import check_rate
@@ -47,6 +48,7 @@ class AskIn(BaseModel):
     question: str = Field(max_length=4000)  # 问题长度上限: 防超长 prompt 成本攻击
     session_id: Optional[str] = None
     history: Optional[List[dict]] = None
+    bot_id: Optional[str] = None  # 联系人式智能体 (app/bots/registry.py)
 
 
 class IngestIn(BaseModel):
@@ -99,6 +101,8 @@ def _persist_answer(session_id: str, result: dict) -> int:
 @router.post("/chat")
 def chat(body: AskIn, request: Request):
     user = require_user(request)
+    if body.bot_id and not get_bot_def(body.bot_id):
+        raise HTTPException(400, f"未知 bot: {body.bot_id}")
     check_rate(user["id"])
     q = body.question.strip()
     if not q:
@@ -110,14 +114,15 @@ def chat(body: AskIn, request: Request):
         if classify_smart(q)["intent"] == "sql":
             result = {"type": "sql", **text2sql.query(q, history=body.history)}
         else:
-            result = {"type": "kb", **pipeline.ask(q, history=body.history)}
+            result = {"type": "kb", **pipeline.ask(q, history=body.history, bot_id=body.bot_id)}
     except SQLRejected as exc:
         raise HTTPException(400, f"SQL 安全校验未通过: {exc}") from exc
     except LLMError as exc:
         raise HTTPException(503, str(exc)) from exc
     mid = _persist_answer(session["id"], result)
+    decision = "auto-approved" if result.get("type") == "sql" else ""
     audit_mod.record(user["username"], "/api/chat", result.get("type"), q,
-                     int((time.time() - t0) * 1000))
+                     int((time.time() - t0) * 1000), decision=decision)
     return {"session_id": session["id"], "assistant_message_id": mid, **result}
 
 
@@ -145,14 +150,14 @@ def chat_stream(body: AskIn, request: Request):
             if classify_smart(q)["intent"] == "sql":
                 intent = "sql"
                 yield sse("meta", {"type": "sql", "session_id": session["id"]})
-                result_holder = {"type": "sql", **text2sql.query(q, history=history)}
+                result_holder = {"type": "sql", **text2sql.query(q, history=history, bot_id=body.bot_id)}
                 mid = _persist_answer(session["id"], result_holder)
                 persisted = True
                 yield sse("result", {**result_holder, "message_id": mid})
             else:
                 yield sse("meta", {"type": "kb", "session_id": session["id"]})
                 deltas, sources = [], []
-                for ev in pipeline.ask_stream(q, history=history):
+                for ev in pipeline.ask_stream(q, history=history, bot_id=body.bot_id):
                     if ev["type"] == "delta":
                         deltas.append(ev["text"])
                         yield sse("delta", {"text": ev["text"]})
@@ -188,10 +193,12 @@ def chat_stream(body: AskIn, request: Request):
 def kb_ask(body: AskIn, request: Request):
     user = require_user(request)
     check_rate(user["id"])
+    if body.bot_id and not get_bot_def(body.bot_id):
+        raise HTTPException(400, f"未知 bot: {body.bot_id}")
     q = body.question.strip()
     q = _guard_scan(user, q, "/api/kb/ask")
     t0 = time.time()
-    result = {"type": "kb", **pipeline.ask(q, history=body.history)}
+    result = {"type": "kb", **pipeline.ask(q, history=body.history, bot_id=body.bot_id)}
     if body.session_id:
         session = db.get_chat_session(body.session_id, user_id=user["id"])
         if not session:
@@ -199,7 +206,7 @@ def kb_ask(body: AskIn, request: Request):
         db.add_message(session["id"], "user", "", q)
         mid = _persist_answer(session["id"], result)
         audit_mod.record(user["username"], "/api/kb/ask", "kb", q,
-                         int((time.time() - t0) * 1000))
+                         int((time.time() - t0) * 1000), decision="auto-approved")
         return {"session_id": session["id"], "assistant_message_id": mid, **result}
     audit_mod.record(user["username"], "/api/kb/ask", "kb", q,
                      int((time.time() - t0) * 1000))
@@ -210,6 +217,8 @@ def kb_ask(body: AskIn, request: Request):
 def data_query(body: AskIn, request: Request):
     user = require_user(request)
     check_rate(user["id"])
+    if body.bot_id and not get_bot_def(body.bot_id):
+        raise HTTPException(400, f"未知 bot: {body.bot_id}")
     q = body.question.strip()
     q = _guard_scan(user, q, "/api/data/query")
     t0 = time.time()
@@ -226,10 +235,10 @@ def data_query(body: AskIn, request: Request):
         db.add_message(session["id"], "user", "", q)
         mid = _persist_answer(session["id"], result)
         audit_mod.record(user["username"], "/api/data/query", "sql", q,
-                         int((time.time() - t0) * 1000))
+                         int((time.time() - t0) * 1000), decision="auto-approved")
         return {"session_id": session["id"], "assistant_message_id": mid, **result}
     audit_mod.record(user["username"], "/api/data/query", "sql", q,
-                     int((time.time() - t0) * 1000))
+                     int((time.time() - t0) * 1000), decision="auto-approved")
     return result
 
 
@@ -342,6 +351,15 @@ def kb_upload(request: Request, body: UploadIn):
     summary = ingest_dir(str(target_dir))
     audit_mod.record(user["username"], "/api/kb/upload", "", name, 0)
     return {"ok": True, "saved": target.name, **summary}
+
+
+@router.get("/bots")
+def list_bots(request: Request):
+    """联系人式智能体清单 (bots-as-contacts, 借鉴 OpenMausBot)。"""
+    require_user(request)
+    from app.bots.registry import list_bots as _list
+
+    return {"bots": _list()}
 
 
 @router.post("/kb/ingest")

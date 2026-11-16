@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.config import abs_path, cfg
 from app.llm.client import get_llm
@@ -39,10 +39,12 @@ def execute_sql(sql: str) -> Tuple[List[str], List[List[Any]]]:
     return columns, rows
 
 
-def query(question: str, history=None) -> Dict[str, Any]:
+def query(question: str, history=None, bot_id: Optional[str] = None) -> Dict[str, Any]:
     max_rows = int(cfg("sqlbot.max_rows", 200))
     prompt = T2SQL_SYSTEM.format(schema=SCHEMA_TEXT, fewshot=FEWSHOT, max_rows=max_rows)
-    messages = [{"role": "system", "content": prompt}]
+    from app.bots.registry import persona_system_prompt
+    system = persona_system_prompt(bot_id, prompt) if bot_id else prompt
+    messages = [{"role": "system", "content": system}]
     messages.extend(clean_history(history, max_turns=4))
     messages.append({"role": "user", "content": question})
     raw = get_llm().chat(messages)
