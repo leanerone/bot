@@ -149,12 +149,16 @@ def chat_stream(body: AskIn, request: Request):
             if classify_smart(q)["intent"] == "sql":
                 intent = "sql"
                 yield sse("meta", {"type": "sql", "session_id": session["id"]})
+                yield sse("step", {"label": "生成 SQL (语义层 + 会话历史)"})
                 result_holder = {"type": "sql", **text2sql.query(q, history=history)}
+                yield sse("step", {"label": "安全校验 (白名单 + 只读连接)"})
                 mid = _persist_answer(session["id"], result_holder)
                 persisted = True
+                yield sse("step", {"label": f"只读执行完成 · {result_holder.get('row_count', 0)} 行"})
                 yield sse("result", {**result_holder, "message_id": mid})
             else:
                 yield sse("meta", {"type": "kb", "session_id": session["id"]})
+                yield sse("step", {"label": "检索知识库 (向量+BM25 混合)"})
                 deltas, sources = [], []
                 for ev in pipeline.ask_stream(q, history=history):
                     if ev["type"] == "delta":
@@ -162,6 +166,7 @@ def chat_stream(body: AskIn, request: Request):
                         yield sse("delta", {"text": ev["text"]})
                     else:
                         sources = ev.get("sources", [])
+                        yield sse("step", {"label": "整理引用来源"})
                 result_holder = {"type": "kb", "answer": "".join(deltas), "sources": sources}
                 mid = _persist_answer(session["id"], result_holder)
                 persisted = True
