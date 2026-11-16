@@ -289,3 +289,4 @@
 - K-GATE3 (02:56): exit=0
 - K-GATE4 (03:26): exit=0
 - K-GATE5 (03:57): exit=0
+- K-GATE6 (04:28): exit=0
