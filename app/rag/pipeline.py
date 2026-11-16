@@ -15,6 +15,7 @@ from app.config import cfg
 from app.guard.prompt_guard import wrap_context
 from app.llm.client import get_llm
 from app.llm.prompts import RAG_SYSTEM, compress_history
+from app.bots.registry import persona_system_prompt
 from app.rag.bm25 import BM25Index
 from app.rag.embedder import get_embedder
 from app.rag.ingest import get_store
@@ -101,29 +102,31 @@ def _retrieve(question: str, top_k: Optional[int] = None) -> Tuple[Optional[str]
     return context, sources
 
 
-def _build_messages(question: str, history, context: str) -> List[dict]:
+def _build_messages(question: str, history, context: str, bot_id: Optional[str] = None) -> List[dict]:
     # C1 间接注入防护: 检索资料包进"资料非指令"信任边界 (OWASP LLM01 纵深第 2 层)
-    messages = [{"role": "system", "content": RAG_SYSTEM.format(context=wrap_context(context))}]
+    base = RAG_SYSTEM.format(context=wrap_context(context))
+    system = persona_system_prompt(bot_id, base) if bot_id else base
+    messages = [{"role": "system", "content": system}]
     messages.extend(compress_history(history))  # E3: 长会话自动压缩
     messages.append({"role": "user", "content": question})
     return messages
 
 
-def ask(question: str, history=None, top_k: Optional[int] = None) -> dict:
+def ask(question: str, history=None, top_k: Optional[int] = None, bot_id: Optional[str] = None) -> dict:
     context, sources = _retrieve(question, top_k)
     if context is None:
         return {"answer": _EMPTY_HINT, "sources": []}
-    answer = get_llm().chat(_build_messages(question, history, context))
+    answer = get_llm().chat(_build_messages(question, history, context, bot_id))
     return {"answer": answer, "sources": sources}
 
 
-def ask_stream(question: str, history=None, top_k: Optional[int] = None) -> Generator[dict, None, None]:
+def ask_stream(question: str, history=None, top_k: Optional[int] = None, bot_id: Optional[str] = None) -> Generator[dict, None, None]:
     """流式问答: 依次产出 {"type":"delta","text":...} 与 {"type":"done","sources":[...]}。"""
     context, sources = _retrieve(question, top_k)
     if context is None:
         yield {"type": "delta", "text": _EMPTY_HINT}
         yield {"type": "done", "sources": []}
         return
-    for chunk in get_llm().chat_stream(_build_messages(question, history, context)):
+    for chunk in get_llm().chat_stream(_build_messages(question, history, context, bot_id)):
         yield {"type": "delta", "text": chunk}
     yield {"type": "done", "sources": sources}

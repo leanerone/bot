@@ -21,6 +21,7 @@ from app.api import audit as audit_mod
 from app.api.deps import require_role, require_user
 from app.api.intent import classify_smart
 from app.api.limits import check_rate
+from app.bots.registry import get_bot as get_bot_def
 from app.config import ROOT, abs_path, cfg
 from app.guard import prompt_guard
 from app.llm.client import LLMError, degraded_status
@@ -47,6 +48,7 @@ class AskIn(BaseModel):
     question: str = Field(max_length=4000)  # 问题长度上限: 防超长 prompt 成本攻击
     session_id: Optional[str] = None
     history: Optional[List[dict]] = None
+    bot_id: Optional[str] = None  # 联系人式智能体 (app/bots/registry.py)
 
 
 class IngestIn(BaseModel):
@@ -99,6 +101,8 @@ def _persist_answer(session_id: str, result: dict) -> int:
 @router.post("/chat")
 def chat(body: AskIn, request: Request):
     user = require_user(request)
+    if body.bot_id and not get_bot_def(body.bot_id):
+        raise HTTPException(400, f"未知 bot: {body.bot_id}")
     check_rate(user["id"])
     q = body.question.strip()
     if not q:
@@ -110,7 +114,7 @@ def chat(body: AskIn, request: Request):
         if classify_smart(q)["intent"] == "sql":
             result = {"type": "sql", **text2sql.query(q, history=body.history)}
         else:
-            result = {"type": "kb", **pipeline.ask(q, history=body.history)}
+            result = {"type": "kb", **pipeline.ask(q, history=body.history, bot_id=body.bot_id)}
     except SQLRejected as exc:
         raise HTTPException(400, f"SQL 安全校验未通过: {exc}") from exc
     except LLMError as exc:
@@ -188,10 +192,12 @@ def chat_stream(body: AskIn, request: Request):
 def kb_ask(body: AskIn, request: Request):
     user = require_user(request)
     check_rate(user["id"])
+    if body.bot_id and not get_bot_def(body.bot_id):
+        raise HTTPException(400, f"未知 bot: {body.bot_id}")
     q = body.question.strip()
     q = _guard_scan(user, q, "/api/kb/ask")
     t0 = time.time()
-    result = {"type": "kb", **pipeline.ask(q, history=body.history)}
+    result = {"type": "kb", **pipeline.ask(q, history=body.history, bot_id=body.bot_id)}
     if body.session_id:
         session = db.get_chat_session(body.session_id, user_id=user["id"])
         if not session:
@@ -342,6 +348,15 @@ def kb_upload(request: Request, body: UploadIn):
     summary = ingest_dir(str(target_dir))
     audit_mod.record(user["username"], "/api/kb/upload", "", name, 0)
     return {"ok": True, "saved": target.name, **summary}
+
+
+@router.get("/bots")
+def list_bots(request: Request):
+    """联系人式智能体清单 (bots-as-contacts, 借鉴 OpenMausBot)。"""
+    require_user(request)
+    from app.bots.registry import list_bots as _list
+
+    return {"bots": _list()}
 
 
 @router.post("/kb/ingest")
