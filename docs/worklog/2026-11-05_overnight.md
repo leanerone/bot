@@ -291,3 +291,4 @@
 - db.py: provision_user 域账号自动建档; 与内置账号体系并存 (Cookie 令牌通道不变)
 - tests/test_jwt_bridge.py: 5 项 (自动建档/角色映射/错签名/过期/桥关闭) — 148 测试全绿
 - 分支 bots (00:05 推送, 4525084)
+- J-GATE1 (00:37): exit=1
