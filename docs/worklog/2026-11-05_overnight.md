@@ -287,3 +287,4 @@
 - K-GATE1 (01:54): exit=0
 - K-GATE2 (02:25): exit=0
 - K-GATE3 (02:56): exit=0
+- K-GATE4 (03:26): exit=0
