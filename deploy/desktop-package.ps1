@@ -18,6 +18,7 @@ python -m PyInstaller --noconfirm --clean --onedir --name FabBotBackend `
   --add-data "data/knowledge;bundle/knowledge" `
   --add-data "config.yaml;bundle" `
   --add-data "desktop/ui/dist;ui_dist" `
+  --add-data "skills;skills" `
   backend_runner.py
 if ($LASTEXITCODE -ne 0) { throw "sidecar 打包失败" }
 

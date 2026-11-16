@@ -155,6 +155,11 @@ if need_cfg:
 
 # 2) 知识样例落位到 data/knowledge (与默认配置对齐)
 bundled_kb = meipass / "bundle" / "knowledge"
+bundled_skills = meipass / "bundle" / "skills"
+target_skills = root / "skills"
+if bundled_skills.exists() and not any(target_skills.glob("*/SKILL.md")):
+    shutil.copytree(bundled_skills, target_skills, dirs_exist_ok=True)
+    print("[runner] SKILL 目录已落位")
 target_kb = root / "data" / "knowledge"
 target_kb.mkdir(parents=True, exist_ok=True)
 if bundled_kb.exists() and not any(target_kb.iterdir()):
