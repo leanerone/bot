@@ -38,7 +38,7 @@ def _file_log(event: Dict[str, Any]) -> None:
 
 
 def record(user: str, api: str, intent: str, question: str, ms: int,
-           status: str = "ok") -> None:
+           status: str = "ok", decision: str = "") -> None:
     if cfg("audit.mask_pii", True):
         question = mask_pii(question or "")
     max_len = int(cfg("audit.max_text_len", 200))
@@ -46,12 +46,12 @@ def record(user: str, api: str, intent: str, question: str, ms: int,
         question = (question or "")[:max_len]
     event = {"ts": datetime.now().isoformat(timespec="seconds"), "user": user,
              "api": api, "intent": intent, "question": question,
-             "ms": ms, "status": status}
+             "ms": ms, "status": status, "decision": decision}
     try:
         _file_log(event)
     except Exception:
         pass
     try:
-        db.log_audit(user, api, intent or "", question or "", ms, status)
+        db.log_audit(user, api, intent or "", question or "", ms, status, decision)
     except Exception:
         pass  # 审计入库失败不阻断主流程 (文件侧仍留痕)

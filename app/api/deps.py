@@ -6,6 +6,7 @@ v4.4 (C3): 令牌绑定 UA 摘要 —— 换浏览器/设备 UA 不一致即失�
 from __future__ import annotations
 
 import hashlib
+import os
 from typing import Optional
 
 from fastapi import HTTPException, Request
@@ -51,7 +52,40 @@ def current_user(request: Request) -> Optional[dict]:
     tok = _token_from(request)
     if not tok:
         return None
-    return db.resolve_token(tok, ua_hash=ua_hash(request))
+    user = db.resolve_token(tok, ua_hash=ua_hash(request))
+    if user:
+        return user
+    return _resolve_external_jwt(tok)
+
+
+def _resolve_external_jwt(token: str) -> Optional[dict]:
+    """AIWEB JWT 身份桥 (Hub Phase 1): HS256 共享密钥 + 域账号自动建档 (viewer)。
+
+    仅当 auth.jwt.enabled=true 时生效; 校验签名/过期/issuer, sub=用户名。
+    """
+    if not cfg("auth.jwt.enabled", False):
+        return None
+    try:
+        import jwt as pyjwt
+    except ImportError:
+        return None
+    try:
+        claims = pyjwt.decode(
+            token,
+            os.environ.get("FABBOT_JWT_SECRET") or cfg("auth.jwt.secret", ""),
+            algorithms=["HS256"],
+            issuer=cfg("auth.jwt.issuer", "aiweb") or None,
+            options={"require": ["exp", "sub"]},
+        )
+    except Exception:
+        return None
+    username = str(claims["sub"])
+    user = db.get_user_by_username(username)
+    if user:
+        return user if not user["disabled"] else None
+    role = cfg("auth.jwt.auto_provision", "viewer")
+    display = str(claims.get("name") or claims.get("display_name") or username)
+    return db.provision_user(username, role=role, display_name=display)
 
 
 def require_user(request: Request) -> dict:

@@ -81,7 +81,8 @@ CREATE TABLE IF NOT EXISTS audit(
   intent TEXT DEFAULT '',
   question TEXT DEFAULT '',
   ms INTEGER DEFAULT 0,
-  status TEXT DEFAULT 'ok'
+  status TEXT DEFAULT 'ok',
+  decision TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS tasks(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,6 +142,9 @@ def get_conn() -> sqlite3.Connection:
             _conn.execute("PRAGMA foreign_keys=ON")
             _conn.executescript(_SCHEMA)
             _migrate()
+            audit_cols = [r[1] for r in _conn.execute("PRAGMA table_info(audit)")]
+            if "decision" not in audit_cols:
+                _conn.execute("ALTER TABLE audit ADD COLUMN decision TEXT DEFAULT ''")
             _seed_default_users()
         return _conn
 
@@ -253,6 +257,27 @@ def set_password(user_id: str, password: str) -> None:
         conn.execute("UPDATE users SET pw_hash = ? WHERE id = ?", (hash_password(password), user_id))
         conn.commit()
         revoke_user_tokens(user_id)
+
+
+def provision_user(username: str, role: str = "viewer",
+                   display_name: str = "") -> Dict[str, Any]:
+    """域/SSO 账号自动建档: 随机不可登录口令, 仅作身份映射 (Hub 身份桥)。"""
+    existing = get_user_by_username(username)
+    if existing:
+        return existing
+    from app.store.security import hash_password
+    import secrets as _secrets
+
+    with _lock:
+        conn = get_conn()
+        uid = f"u_{username}_{int(datetime.now().timestamp())}"
+        conn.execute(
+            "INSERT INTO users(id, username, pw_hash, role, display_name, created_at) VALUES (?,?,?,?,?,?)",
+            (uid, username, hash_password(_secrets.token_urlsafe(32)), role,
+             display_name or username, _now()),
+        )
+        conn.commit()
+    return get_user_by_username(username)
 
 
 def authenticate(username: str, password: str) -> Optional[Dict[str, Any]]:
@@ -490,12 +515,13 @@ def message_owner(message_id: int) -> Optional[str]:
 # ── 审计 ──
 
 def log_audit(user: str, api: str, intent: str, question: str, ms: int,
-              status: str = "ok") -> None:
+              status: str = "ok", decision: str = "") -> None:
     with _lock:
         conn = get_conn()
         conn.execute(
-            "INSERT INTO audit(ts, user, api, intent, question, ms, status) VALUES (?,?,?,?,?,?,?)",
-            (_now(), user, api, intent, question[:200], ms, status),
+            "INSERT INTO audit(ts, user, api, intent, question, ms, status, decision) "
+            "VALUES (?,?,?,?,?,?,?,?)",
+            (_now(), user, api, intent, question[:200], ms, status, decision),
         )
         conn.commit()
 
