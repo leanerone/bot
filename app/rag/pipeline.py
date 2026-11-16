@@ -120,7 +120,8 @@ def ask(question: str, history=None, top_k: Optional[int] = None, bot_id: Option
     return {"answer": answer, "sources": sources}
 
 
-def ask_stream(question: str, history=None, top_k: Optional[int] = None, bot_id: Optional[str] = None) -> Generator[dict, None, None]:
+def ask_stream(question: str, history=None, top_k: Optional[int] = None,
+               bot_id: Optional[str] = None) -> Generator[dict, None, None]:
     """流式问答: 依次产出 {"type":"delta","text":...} 与 {"type":"done","sources":[...]}。"""
     context, sources = _retrieve(question, top_k)
     if context is None:

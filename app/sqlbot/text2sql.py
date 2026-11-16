@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.config import abs_path, cfg
 from app.llm.client import get_llm

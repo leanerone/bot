@@ -6,7 +6,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import jwt as pyjwt
-import pytest
 from fastapi.testclient import TestClient
 
 from app.config import CFG

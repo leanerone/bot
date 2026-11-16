@@ -19,7 +19,7 @@ def test_decision_enum_recorded():
         r = c.post("/api/data/query", json={"question": "机台状态怎么查"})
         assert r.status_code == 200
         # SQL 拒绝 → auto-denied (validator 拒绝写操作)
-        r2 = c.post("/api/data/query", json={"question": "删除所有告警记录"})
+        c.post("/api/data/query", json={"question": "删除所有告警记录"})
         rows = db.list_audit(50)
         decisions = [(a["api"], a.get("decision")) for a in rows]
         assert ("auto-approved", None) not in decisions  # decision 字段存在
